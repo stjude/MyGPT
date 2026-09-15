@@ -46,3 +46,7 @@ frontend/.env.*
 frontend/.env.development
 MCP-server/mygpt_backend.egg-info/*
 backend/data/images/*
+electron/node_modules/*
+electron/release/*
+electron/dist/*
+electron/build/*
