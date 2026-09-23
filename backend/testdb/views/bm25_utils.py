@@ -26,7 +26,7 @@ def index_document_by_bm25(dataset_name, language_of_docs='english', progress_ca
 
     with documents_file.open('r') as file:
         for line_number, line in enumerate(
-                tqdm((file.readlines()), desc=f'Reading {dataset_name}'), 100
+                tqdm(file, total=total_lines, desc=f'Reading {dataset_name}'), 1
         ):
             # Strip whitespace and append the line to the documents list
             line = line.strip()
@@ -78,10 +78,10 @@ def retrieve_chunks_by_bm25(queryText, dataset_name, focused_document_titles=[],
     if focused_document_titles != []:
         with chunk_file.open('r') as file:
             chunk_lines = file.readlines()
+            retriever_loaded = bm25s.BM25.load(tokenizer_directory, mmap=True, load_corpus=True)
         for document_title in focused_document_titles:
             weight_mask = np.array([1 if "'title': '" + str(document_title) + "'" in line else 0 for line in chunk_lines])
 
-            retriever_loaded = bm25s.BM25.load(tokenizer_directory, mmap=True, load_corpus=True)
             results_temp, scores_temp = retriever_loaded.retrieve(queriesTokenized, k=chunk_count, return_as="tuple", weight_mask=weight_mask if document_title != '' else None)
             results.extend(results_temp)
             scores.extend(scores_temp)
@@ -113,36 +113,36 @@ def retrieve_chunks_by_bm25(queryText, dataset_name, focused_document_titles=[],
     return results[0], scores[0]
 
 def hybrid_source_combination(vector_sources, bm25_sources):
-    # find duplicates from both the list with same text
+    bm25_sources_by_key = {}
+    for source in bm25_sources:
+        bm25_sources_by_key.setdefault((source['context'], source['page']), source)
     duplicates = []
     combined_sources = []
     if len(bm25_sources) == 0:
         # if vector sources are empty, return bm25 sources
         return vector_sources
     
+    duplicate_keys = set()
     for vector_source in vector_sources:
-        for bm25_source in bm25_sources:
-            if vector_source['vector_score'] < 0.1 and bm25_source['bm25_score'] < 0.1:
-                continue
-            if vector_source['context'] == bm25_source['context'] and vector_source['page'] == bm25_source['page']:
-                # create a new source with the same text and distance from bm25
-                new_source = vector_source.copy()
-                new_source['bm25_score_raw'] = bm25_source['bm25_score_raw']
-                new_source['bm25_score'] = bm25_source['bm25_score']
-                new_source['bm25_rank'] = bm25_source['rank']
-                duplicates.append(new_source)
-                break
+        if vector_source['vector_score'] < 0.1:
+            continue
+        source_key = (vector_source['context'], vector_source['page'])
+        bm25_source = bm25_sources_by_key.get(source_key)
+        if bm25_source is None or bm25_source['bm25_score'] < 0.1:
+            continue
+        new_source = vector_source.copy()
+        new_source['bm25_score_raw'] = bm25_source['bm25_score_raw']
+        new_source['bm25_score'] = bm25_source['bm25_score']
+        new_source['bm25_rank'] = bm25_source['rank']
+        duplicates.append(new_source)
+        duplicate_keys.add(source_key)
 
     # add the vector sources to the combined sources not present in duplicates
     for vector_source in vector_sources:
         if vector_source['vector_score'] < 0.1:
             continue
-        # check if the source is already in the combined sources
-        for duplicate in duplicates:
-            if vector_source['context'] == duplicate['context'] and vector_source['page'] == duplicate['page']:
-                break
-        else:
-            # add the vector source to the combined sources
+        source_key = (vector_source['context'], vector_source['page'])
+        if source_key not in duplicate_keys:
             combined_sources.append(vector_source)
     
     # add the duplicates to the combined sources
@@ -152,12 +152,8 @@ def hybrid_source_combination(vector_sources, bm25_sources):
     for bm25_source in bm25_sources:
         if  bm25_source['bm25_score'] < 0.1:
             continue
-        # check if the source is already in the combined sources
-        for duplicate in duplicates:
-            if bm25_source['context'] == duplicate['context'] and bm25_source['page'] == duplicate['page']:
-                break
-        else:
-            # add the bm25 source to the combined sources
+        source_key = (bm25_source['context'], bm25_source['page'])
+        if source_key not in duplicate_keys:
             combined_sources.append(bm25_source)
 
     return combined_sources
