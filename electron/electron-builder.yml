@@ -1,5 +1,5 @@
 appId: org.stjude.mygpt
-productName: MyGPT
+productName: MyGPT-spark
 copyright: Copyright © 2026 St. Jude Children's Research Hospital
 
 directories:
@@ -33,6 +33,9 @@ mac:
         - x64
   hardenedRuntime: true
   gatekeeperAssess: false
+
+dmg:
+  filesystem: APFS
 
 win:
   target:

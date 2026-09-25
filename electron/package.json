@@ -14,7 +14,7 @@
     "build": "npm run build:frontend && npm run build:ts",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",
-    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:mac": "npm run build && cross-env CUSTOM_DMGBUILD_PATH=./scripts/dmgbuild-with-retries.js DMGBUILD_DETACH_RETRIES=6 electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:linux": "npm run build && electron-builder --linux",
     "docker:up": "cd .. && docker compose up -d db backend grobid",
