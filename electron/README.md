@@ -100,7 +100,7 @@ When MyGPT Desktop or Docker backend is running, all REST APIs are served on `ht
 
 3. **Running the Python Client Demo:**
    ```bash
-   python3 ../examples/python_api_client.py --base-url http://127.0.0.1:8000
+   python3 ../scripts/python_api_client.py --base-url http://127.0.0.1:8000
    ```
 
 4. **In-App Developer Settings:**
