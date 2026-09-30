@@ -43,6 +43,16 @@ const canManageDockerBackend = (value: string): boolean => {
 	}
 }
 
+const getBackendDocsUrl = (backendUrl: string, path: string): string | null => {
+	try {
+		const endpoint = new URL(backendUrl)
+		if (!['http:', 'https:'].includes(endpoint.protocol) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) return null
+		return new URL(path, `${endpoint.href.replace(/\/+$/, '')}/`).href
+	} catch {
+		return null
+	}
+}
+
 export const DeveloperAPISettings: React.FC<DeveloperAPISettingsProps> = ({
 	currentSettings,
 	djangoLogin
@@ -54,6 +64,8 @@ export const DeveloperAPISettings: React.FC<DeveloperAPISettingsProps> = ({
 	const [isStartingBackend, setIsStartingBackend] = useState(false)
 	const backendUrl = runtimeConfig.backendUrl
 	const ollamaUrl = runtimeConfig.ollamaUrl
+	const swaggerUrl = getBackendDocsUrl(backendUrl, 'api/docs/')
+	const schemaUrl = getBackendDocsUrl(backendUrl, 'api/schema/')
 	const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null)
 	const [copiedToken, setCopiedToken] = useState(false)
 	const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
@@ -406,8 +418,8 @@ print("Upload status:", res.json())`
 					</p>
 				</div>
 				<div className="flex gap-2">
-					<a
-						href={`${backendUrl}/api/docs/`}
+					{swaggerUrl && <a
+						href={swaggerUrl}
 						target="_blank"
 						rel="noreferrer"
 						className="flex items-center gap-1.5 bg-panel1 hover:bg-nav text-white px-3 py-1.5 rounded-md text-sm font-medium transition shadow-sm"
@@ -415,16 +427,16 @@ print("Upload status:", res.json())`
 						<DocumentTextIcon className="h-4 w-4" />
 						Swagger UI
 						<ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-					</a>
-					<a
-						href={`${backendUrl}/api/schema/`}
+					</a>}
+					{schemaUrl && <a
+						href={schemaUrl}
 						target="_blank"
 						rel="noreferrer"
 						className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-800 dark:text-gray-200 px-3 py-1.5 rounded-md text-sm font-medium transition"
 					>
 						OpenAPI JSON
 						<ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-					</a>
+					</a>}
 				</div>
 			</div>
 
