@@ -117,7 +117,7 @@ def build_binary():
     for src, dst in data_folders:
         src_path = os.path.join(base_dir, src)
         if os.path.exists(src_path):
-            pyinstaller_cmd.append(f"--add-data={src_path}:{dst}")
+            pyinstaller_cmd.append(f"--add-data={src_path}{os.pathsep}{dst}")
 
     for imp in hidden_imports:
         pyinstaller_cmd.append(f"--hidden-import={imp}")
