@@ -150,9 +150,18 @@ export class ProcessManager {
           this.spawnedDocker = true
           console.log('[ProcessManager] Docker backend containers started successfully.')
           resolve(true)
-        } else {
-          resolve(false)
+          return
         }
+
+        console.warn(`[ProcessManager] docker compose exited with code ${code}. Trying legacy docker-compose...`)
+        const legacyProc = spawn('docker-compose', ['up', '-d', 'db', 'backend', 'grobid'], {
+          cwd: this.projectRoot,
+          stdio: 'inherit',
+        })
+        legacyProc.on('close', (legacyCode) => {
+          this.spawnedDocker = legacyCode === 0
+          resolve(legacyCode === 0)
+        })
       })
     })
   }
