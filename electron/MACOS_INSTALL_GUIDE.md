@@ -69,10 +69,12 @@ Because MyGPT is an open-source binary distributed directly without an Apple App
 
 When MyGPT opens, look at the **Footer bar** at the bottom of the screen:
 
-* 🟢 **Backend: Online** (Green pulse) — Connected to Django API & PostgreSQL database on `127.0.0.1:8000`.
-* 🟢 **Ollama: Online** (Green pulse) — Connected to local Ollama engine on `127.0.0.1:11434`.
+* 🟢 **Backend: Online** (Green pulse) — The configured Django API is reachable.
+* 🟢 **Ollama: Online** (Green pulse) — The configured Ollama service is reachable.
 
-If either indicator displays 🔴 **Offline**, check that Docker Desktop or the Ollama menu bar app is active.
+Hover over a status indicator (or focus it with the keyboard) to see its configured endpoint. The default local endpoints are `http://127.0.0.1:8000` for the backend and `http://127.0.0.1:11434` for Ollama; yours may differ. Change them in **Settings > Developer / API > Runtime services**.
+
+If either indicator displays 🔴 **Offline**, check the endpoint shown in its tooltip and verify that Docker Desktop or Ollama is running there. The GPT model dropdown lists models available from the configured Ollama service; if it is empty, check the Ollama endpoint and run `ollama list` on that host.
 
 ---
 

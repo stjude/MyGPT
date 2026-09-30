@@ -8,6 +8,8 @@ const Footer = (props: {
 }) => {
 	const version = import.meta.env.VITE_MYGPT_VERSION || '1.0.2'
 	const year = new Date().getFullYear()
+	const backendEndpoint = window.mygptRuntimeConfig.backendApiUrl.replace(/\/+$/, '')
+	const ollamaEndpoint = window.mygptRuntimeConfig.ollamaApiUrl.replace(/\/+$/, '')
 
 	const [backendUp, setBackendUp] = useState<boolean | null>(null)
 	const [ollamaUp, setOllamaUp] = useState<boolean | null>(null)
@@ -84,14 +86,15 @@ const Footer = (props: {
 
 		return (
 			<div
-				className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ${
+				className={`group relative flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ${
 					isOnline
 						? 'bg-emerald-900/60 text-emerald-200 border border-emerald-500/40 shadow-sm'
 						: isOffline
 						? 'bg-rose-900/60 text-rose-200 border border-rose-500/40 shadow-sm'
 						: 'bg-gray-800/60 text-gray-300 border border-gray-600/30'
 				}`}
-				title={`${label}: ${isOnline ? 'Online & Ready' : isOffline ? `Offline / Unreachable (${endpoint})` : 'Checking connectivity...'}`}
+				tabIndex={0}
+				aria-describedby={`${label.toLowerCase()}-endpoint-tooltip`}
 			>
 				<span
 					className={`w-2 h-2 rounded-full ${
@@ -103,6 +106,13 @@ const Footer = (props: {
 					}`}
 				/>
 				<span>{label}: {isOnline ? 'Online' : isOffline ? 'Offline' : '...'}</span>
+				<span
+					id={`${label.toLowerCase()}-endpoint-tooltip`}
+					role='tooltip'
+					className='pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 break-all rounded bg-gray-900 px-2 py-1.5 text-left text-xs font-normal text-white opacity-0 shadow-lg group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100'
+				>
+					{label} endpoint: {endpoint}
+				</span>
 			</div>
 		)
 	}
@@ -119,8 +129,8 @@ const Footer = (props: {
 			{/* Center: Version & Service Status Badges */}
 			<div className='flex flex-row items-center gap-3'>
 				{version && <span className='text-xs text-white/60 font-mono'>v{version}</span>}
-				<StatusPill up={backendUp} label='Backend' endpoint='127.0.0.1:8000' />
-				<StatusPill up={ollamaUp} label='Ollama' endpoint='127.0.0.1:11434' />
+				<StatusPill up={backendUp} label='Backend' endpoint={backendEndpoint} />
+				<StatusPill up={ollamaUp} label='Ollama' endpoint={ollamaEndpoint} />
 			</div>
 
 			{/* Right: Actions / Links */}

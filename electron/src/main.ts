@@ -6,6 +6,10 @@ import { OllamaManager } from './ollama-manager'
 import { setupApplicationMenu } from './menu'
 import { RuntimeConfig, RuntimeConfigStore } from './runtime-config'
 
+if (!app.isPackaged) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'MyGPT-desktop-dev'))
+}
+
 let mainWindow: BrowserWindow | null = null
 const processManager = new ProcessManager('127.0.0.1', 8000)
 const ollamaManager = new OllamaManager('127.0.0.1', 11434)

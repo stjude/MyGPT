@@ -34,7 +34,7 @@ npm install
 
 ## 💻 Running the Desktop App in Development
 
-Run this command from inside the `electron/` directory:
+From the repository root, run:
 ```bash
 cd electron
 npm run dev
@@ -44,6 +44,8 @@ npm run dev
 1. Checks if the backend containers are up; if not, launches Docker backend (`db`, `backend`, `grobid`).
 2. Starts the Vite React development server on `http://localhost:3000`.
 3. Opens the native **MyGPT Electron Window** with live reloading and native app menus.
+
+The development app uses separate settings from an installed MyGPT app, so both can run at once. Changes to the installed app require rebuilding and reinstalling the desktop package.
 
 ---
 
@@ -109,7 +111,7 @@ When MyGPT Desktop or Docker backend is running, all REST APIs are served on `ht
 **Settings > Developer / API > Runtime services** lets desktop users:
 
 - Change the backend and Ollama API base URLs without rebuilding the frontend.
-- Test the configured services through the status indicators.
+- Check the configured services in the footer: hover over or focus the **Backend** and **Ollama** status indicators to see each endpoint, even when offline.
 - Start the local `db`, `backend`, and `grobid` Docker Compose services.
 - Choose whether local backend containers start automatically with the app.
 

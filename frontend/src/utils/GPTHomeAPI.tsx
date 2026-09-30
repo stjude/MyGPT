@@ -18,18 +18,22 @@ export const fetchAndRegisterOllamaModels = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<string[]> => {
+	let llms: string[] = []
 	try {
-		const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, {
-			method: 'GET',
-			signal,
-		})
-		if (!response.ok) {
-			return []
+		let data: { models: any[] }
+		if (window.electronAPI?.isDesktop) {
+			data = await window.electronAPI.getOllamaStatus()
+		} else {
+			const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, {
+				method: 'GET',
+				signal,
+			})
+			if (!response.ok) return []
+			data = await response.json()
 		}
-		const data = await response.json()
 
-		const llms: string[] = data.models
-			.filter((model: any) => model.quantization_level !== 'F16')
+		llms = data.models
+			.filter((model: any) => (model.details?.quantization_level ?? model.quantization_level) !== 'F16')
 			.map((model: any) => model.name)
 
 		const llms_object = data.models.map((model: any) => ({
@@ -54,11 +58,11 @@ export const fetchAndRegisterOllamaModels = async (
 			}
 		}
 
-		const embeddingModels = data.models.filter(
-			(model: any) =>
-				(model.quantization_level === 'F16' && model.family.includes('bert')) ||
-				model.family.includes('nomic-bert')
-		)
+		const embeddingModels = data.models.filter((model: any) => {
+			const family = model.details?.family ?? model.family ?? ''
+			const quantization = model.details?.quantization_level ?? model.quantization_level
+			return (quantization === 'F16' && family.includes('bert')) || family.includes('nomic-bert')
+		})
 		const embedding_models_object = embeddingModels.map((model: any) => ({
 			name: model.name,
 			size: (model.size * 1e-9).toFixed(2),
@@ -83,9 +87,9 @@ export const fetchAndRegisterOllamaModels = async (
 		return llms
 	} catch (err: any) {
 		if (err?.name !== 'AbortError') {
-			console.warn('fetchAndRegisterOllamaModels: backend unreachable', err)
+			console.warn('fetchAndRegisterOllamaModels: model fetch or registration failed', err)
 		}
-		return []
+		return llms
 	}
 }
 
