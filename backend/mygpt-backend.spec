@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['/Users/jpatel2/Desktop/github_repos/MyGPT/backend/desktop_entrypoint.py'],
+    ['desktop_entrypoint.py'],
     pathex=[],
     binaries=[],
-    datas=[('/Users/jpatel2/Desktop/github_repos/MyGPT/backend/testdb/templates', 'testdb/templates')],
+    datas=[('testdb/templates', 'testdb/templates')],
     hiddenimports=['django.core.management', 'django.contrib.admin.apps', 'django.contrib.auth.apps', 'django.contrib.contenttypes.apps', 'django.contrib.sessions.apps', 'django.contrib.messages.apps', 'django.contrib.staticfiles.apps', 'rest_framework', 'rest_framework.authentication', 'rest_framework.permissions', 'rest_framework.parsers', 'rest_framework.renderers', 'rest_framework_simplejwt', 'drf_spectacular', 'drf_spectacular_sidecar', 'corsheaders', 'django_otp', 'django_otp.plugins.otp_totp', 'django_otp.plugins.otp_static', 'testdb', 'evaluation_dataset', 'authentication', 'chromadb', 'duckdb', 'sentence_transformers', 'bm25s', 'ollama'],
     hookspath=[],
     hooksconfig={},
