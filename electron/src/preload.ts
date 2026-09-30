@@ -2,7 +2,16 @@ import { contextBridge, ipcRenderer, shell } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isDesktop: true,
-  openExternalUrl: (url: string) => shell.openExternal(url),
+  openExternalUrl: (url: string) => {
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return shell.openExternal(url)
+      }
+    } catch {
+      // ignore invalid URLs
+    }
+  },
   getApiBaseUrl: () => ipcRenderer.invoke('get-api-base-url'),
   getRuntimeConfig: () => ipcRenderer.invoke('get-runtime-config'),
   saveRuntimeConfig: (config: {
