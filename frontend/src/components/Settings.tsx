@@ -175,6 +175,11 @@ const Settings = (props: {
 			const llm = llms[0]
 			setLlms(llms)
 			setLlm(llm)
+			props.settingsCallback({
+				...currentSettings,
+				llms,
+				selectedLlm: llms.includes(currentSettings.selectedLlm) ? currentSettings.selectedLlm : (llm || ''),
+			})
 
 			// add new model to backend API
 			let llms_object: any = []
@@ -205,8 +210,14 @@ const Settings = (props: {
 			// const data2 = await response2.json()
 
 		}
-		postData()
-	}, [props.user, props.djangoLogin])
+		postData().catch(error => {
+			console.warn('Unable to refresh Ollama models:', error)
+			setLlms([])
+			setLlm('')
+			props.settingsCallback({ ...currentSettings, llms: [], selectedLlm: '' })
+		})
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [props.user, props.djangoLogin, props.currentSettings.runtimeRevision])
 
 	const settingProps = {
 		defaultSettings: props.defaultSettings,

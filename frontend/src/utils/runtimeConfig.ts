@@ -4,6 +4,8 @@ export interface RuntimeConfig {
 	autoStartBackend: boolean
 }
 
+export const RUNTIME_CONFIG_CHANGED_EVENT = 'mygpt:runtime-config-changed'
+
 const withTrailingSlash = (value: string): string => `${value.replace(/\/+$/, '')}/`
 
 const defaults: RuntimeConfig = {
@@ -19,10 +21,19 @@ window.mygptRuntimeConfig = {
 }
 
 export const applyRuntimeConfig = (config: RuntimeConfig): void => {
+	const previous = getRuntimeConfig()
 	window.mygptRuntimeConfig = {
 		backendApiUrl: withTrailingSlash(config.backendUrl),
 		ollamaApiUrl: withTrailingSlash(config.ollamaUrl),
 		autoStartBackend: config.autoStartBackend,
+	}
+	if (previous.backendUrl !== config.backendUrl || previous.ollamaUrl !== config.ollamaUrl) {
+		window.dispatchEvent(new CustomEvent(RUNTIME_CONFIG_CHANGED_EVENT, {
+			detail: {
+				backendChanged: previous.backendUrl !== config.backendUrl,
+				ollamaChanged: previous.ollamaUrl !== config.ollamaUrl,
+			},
+		}))
 	}
 }
 

@@ -19,8 +19,8 @@ export const fetchAndRegisterOllamaModels = async (
 	signal?: AbortSignal
 ): Promise<string[]> => {
 	try {
-		const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
-			method: 'POST',
+		const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, {
+			method: 'GET',
 			signal,
 		})
 		if (!response.ok) {
