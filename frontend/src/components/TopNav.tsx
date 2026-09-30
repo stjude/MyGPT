@@ -38,7 +38,7 @@ function TopNav(props:{
       }
 
 
-      fetch(`${import.meta.env.VITE_BACKEND_API}api/get_username/?format=json`, requestOptions)
+      fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_username/?format=json`, requestOptions)
         .then(response => {
           if (response.status === 401) {
             localStorage.removeItem('access')

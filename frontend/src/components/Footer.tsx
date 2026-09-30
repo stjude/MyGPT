@@ -31,7 +31,8 @@ const Footer = (props: {
 				}
 			}
 
-			const backendUrl = (import.meta.env.VITE_BACKEND_API || 'http://localhost:8000/').replace(/\/$/, '')
+			const backendUrl = (window.mygptRuntimeConfig.backendApiUrl || 'http://localhost:8000/').replace(/\/$/, '')
+			const ollamaUrl = (window.mygptRuntimeConfig.ollamaApiUrl || 'http://localhost:11434/').replace(/\/$/, '')
 
 			// 2. Check Backend API health
 			try {
@@ -49,12 +50,12 @@ const Footer = (props: {
 						const data = await r.json()
 						isOllamaOnline = Array.isArray(data?.models) && data.models.length > 0
 					} else {
-						const directRes = await fetch('http://127.0.0.1:11434/api/tags')
+						const directRes = await fetch(`${ollamaUrl}/api/tags`)
 						isOllamaOnline = directRes.ok
 					}
 				} catch {
 					try {
-						const directRes = await fetch('http://127.0.0.1:11434/api/tags')
+						const directRes = await fetch(`${ollamaUrl}/api/tags`)
 						isOllamaOnline = directRes.ok
 					} catch {
 						isOllamaOnline = false

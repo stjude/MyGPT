@@ -45,9 +45,9 @@ const Plots = (props: plotsProps) => {
 					'Content-Type': 'application/json'
 				}
 			}
-			// fetch(`${import.meta.env.VITE_BACKEND_API}api/get_vector_embeddings/?format=json&datasets=${selectedDatasets}&question_id=817`, requestOptions)
-			// fetch(`${import.meta.env.VITE_BACKEND_API}api/get_vector_embeddings/?format=json&datasets=${selectedDatasets}`, requestOptions)
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/get_vector_embeddings/?format=json&datasets=GPCR_PCA_n,Harry_Potter_book_1_n,IDR_PCA_n&question_id=6982`, requestOptions)
+			// fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_vector_embeddings/?format=json&datasets=${selectedDatasets}&question_id=817`, requestOptions)
+			// fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_vector_embeddings/?format=json&datasets=${selectedDatasets}`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_vector_embeddings/?format=json&datasets=GPCR_PCA_n,Harry_Potter_book_1_n,IDR_PCA_n&question_id=6982`, requestOptions)
 				.then(response => response.json())
 				.then(data => {
 					const point_dataset:any = data.pca_embeddings.map((point:any) => point.dataset)

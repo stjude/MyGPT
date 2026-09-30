@@ -77,7 +77,7 @@ const Settings = (props: {
 			})
 		}
 		if (!datasets.length || props.currentSettings.fetchDatasets)
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/get_datasets/`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_datasets/`, requestOptions)
 				.then(response => response.json())
 				.then(data => {
 					const dataset_names = data.map((d: any) => d.dataset_name)
@@ -127,7 +127,7 @@ const Settings = (props: {
 							: import.meta.env.VITE_AUTH_TOKEN_DEV}`
 				}
 			}
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/delete_dataset/?dataset=${deleteDataset}&user_email=${email}`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/delete_dataset/?dataset=${deleteDataset}&user_email=${email}`, requestOptions)
 				.then(response => response.json())
 				.then(data => {
 					setDeleteDataset('')
@@ -147,7 +147,7 @@ const Settings = (props: {
 					'Content-Type': 'application/json'
 				}
 			}
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/add_dataset_embeddings/?dataset=${addEmbeddingForDataset}`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_dataset_embeddings/?dataset=${addEmbeddingForDataset}`, requestOptions)
 				.then(response => response.json())
 				.then(() => {
 					setAddEmbeddingForDataset('')
@@ -165,7 +165,7 @@ const Settings = (props: {
 	useEffect(() => {
 
 		const postData = async () => {
-			const response = await fetch(`${import.meta.env.VITE_OLLAMA_API}api/tags`, { method: 'GET' })
+			const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, { method: 'GET' })
 			const data = await response.json()
 
 			// set models
@@ -201,7 +201,7 @@ const Settings = (props: {
 			// 	setTimeout: 10000,
 			// 	body: JSON.stringify({ 'llms': llms_object })
 			// }
-			// const response2 = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_ollama_models/`, requestOptions)
+			// const response2 = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_ollama_models/`, requestOptions)
 			// const data2 = await response2.json()
 
 		}

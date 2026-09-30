@@ -1,4 +1,5 @@
 import * as http from 'http'
+import * as https from 'https'
 
 export interface OllamaModelInfo {
   name: string
@@ -7,16 +8,22 @@ export interface OllamaModelInfo {
 }
 
 export class OllamaManager {
-  private ollamaHost: string = '127.0.0.1'
-  private ollamaPort: number = 11434
+  private baseUrl: string
 
   constructor(host: string = '127.0.0.1', port: number = 11434) {
-    this.ollamaHost = host
-    this.ollamaPort = port
+    this.baseUrl = `http://${host}:${port}`
   }
 
   public getBaseUrl(): string {
-    return `http://${this.ollamaHost}:${this.ollamaPort}`
+    return this.baseUrl
+  }
+
+  public setBaseUrl(value: string): void {
+    this.baseUrl = value.replace(/\/+$/, '')
+  }
+
+  private getClient(): typeof http | typeof https {
+    return this.baseUrl.startsWith('https:') ? https : http
   }
 
   /**
@@ -24,7 +31,7 @@ export class OllamaManager {
    */
   public async isOllamaRunning(): Promise<boolean> {
     return new Promise((resolve) => {
-      const req = http.get(`${this.getBaseUrl()}/api/tags`, (res) => {
+      const req = this.getClient().get(`${this.getBaseUrl()}/api/tags`, (res) => {
         resolve(res.statusCode === 200)
       })
       req.on('error', () => resolve(false))
@@ -40,7 +47,7 @@ export class OllamaManager {
    */
   public async getInstalledModels(): Promise<OllamaModelInfo[]> {
     return new Promise((resolve) => {
-      const req = http.get(`${this.getBaseUrl()}/api/tags`, (res) => {
+      const req = this.getClient().get(`${this.getBaseUrl()}/api/tags`, (res) => {
         if (res.statusCode !== 200) {
           resolve([])
           return
@@ -92,7 +99,7 @@ export class OllamaManager {
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify({ name: modelName, stream: true })
-      const req = http.request(
+      const req = this.getClient().request(
         `${this.getBaseUrl()}/api/pull`,
         {
           method: 'POST',

@@ -80,7 +80,7 @@ export const NavBar = (props = defaultNavProps) => {
 				 },
 				body: JSON.stringify({ 'refresh_token': localStorage.getItem('refresh') })
 			}
-			fetch(`${import.meta.env.VITE_BACKEND_API}logout/`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}logout/`, requestOptions)
 			.then(response => {
 				if (response.status === 204) {
 					console.log('Logged out successfully')
@@ -125,7 +125,7 @@ export const NavBar = (props = defaultNavProps) => {
 			'password': password
 		}
 
-		fetch(`${import.meta.env.VITE_BACKEND_API}token/`, {
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}token/`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',

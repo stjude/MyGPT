@@ -241,7 +241,7 @@ const AddLibrarySettings = (props: {
 			body: formData
 		}
 
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/add_zotero_collection/`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_zotero_collection/`, requestOptions)
 		.then(response => response.json())
 		.then(data => {
 			props.settingsCallback({...currentSettings, fetchDatasets: true, datasetsUpdated: true})
@@ -324,7 +324,7 @@ const AddLibrarySettings = (props: {
 			setUploadStage('uploading')
 			setUploadProgressMessage('Starting upload...')
 
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/upload_documents/`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/upload_documents/`, requestOptions)
 			.then(response => {
 				// Handle streaming response
 				if (!response.ok) {
@@ -421,7 +421,7 @@ const AddLibrarySettings = (props: {
 					},
 				body: formData
 			}
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/add_video_library/`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_video_library/`, requestOptions)
 			.then(response => response.json())
 			.then(data => {
 				props.settingsCallback({...currentSettings, fetchDatasets: true, datasetsUpdated: true})

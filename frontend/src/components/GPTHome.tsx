@@ -1337,7 +1337,7 @@ function GPTHome(props:{
 												user_comment: feedback.user_comment,
 											})
 										}
-										fetch(`${import.meta.env.VITE_BACKEND_API}api/feedback/?format=json`, requestOptions)
+										fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/feedback/?format=json`, requestOptions)
 											.then(response => response.json())
 											.then(data => {
 												console.log(data)

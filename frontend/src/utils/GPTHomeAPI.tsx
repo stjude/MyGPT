@@ -19,7 +19,7 @@ export const fetchAndRegisterOllamaModels = async (
 	signal?: AbortSignal
 ): Promise<string[]> => {
 	try {
-		const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_ollama_models/`, {
+		const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
 			method: 'POST',
 			signal,
 		})
@@ -47,7 +47,7 @@ export const fetchAndRegisterOllamaModels = async (
 				body: JSON.stringify({ llms: llms_object }),
 				signal,
 			}
-			const response2 = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_ollama_models/`, registerOptions)
+			const response2 = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_ollama_models/`, registerOptions)
 			if (response2.ok) {
 				const data2 = await response2.json()
 				console.log(data2)
@@ -73,7 +73,7 @@ export const fetchAndRegisterOllamaModels = async (
 				body: JSON.stringify({ embedding_models: embedding_models_object }),
 				signal,
 			}
-			const response3 = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_embedding_models/`, embeddingOptions)
+			const response3 = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_embedding_models/`, embeddingOptions)
 			if (response3.ok) {
 				const data3 = await response3.json()
 				console.log(data3)
@@ -96,7 +96,7 @@ export const fetchDatasetDetails = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_dataset_details/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_dataset_details/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ export const fetchDocuments = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_documents/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_documents/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ export const fetchSections = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_sections/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_sections/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ export const addDemoLibraryRequest = async (
 		format: 'json',
 		embedding_model: sentenceTransformer,
 	})
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_demo_library/?${params.toString()}`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_demo_library/?${params.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Authorization': getAuthHeader(frontendSettings),
@@ -179,7 +179,7 @@ export const fetchContext = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_context/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_context/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ export const saveAnswer = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/save_answer/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/save_answer/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -223,7 +223,7 @@ export const fetchProtectedMediaBlobUrl = async (
 		requestHeaders['Authorization'] = authHeader
 	}
 
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}media/${mediaPath}`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}media/${mediaPath}`, {
 		method: 'GET',
 		headers: requestHeaders,
 		signal,

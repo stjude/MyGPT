@@ -38,7 +38,7 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 
 	useEffect(() => {
 		// fetch chat history from API
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/get_conversation_history/?dataset=${selectedDataset}`, {
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_conversation_history/?dataset=${selectedDataset}`, {
 			method: 'GET',
 			headers: { 
 				'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 	// fetch answers and sources for selected question
 	useEffect(() => {
 		if (activeQuestionID === 0) return
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/get_question_details/?question_id=${activeQuestionID}`,{
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_question_details/?question_id=${activeQuestionID}`,{
 			method: 'GET',
 			headers: { 
 				'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 			// Fetch all question details
 			const questionDetails = await Promise.all(
 				chatHistory.map(async (item: any) => {
-					const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_question_details/?question_id=${item.question_id}`, {
+					const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_question_details/?question_id=${item.question_id}`, {
 						method: 'GET',
 						headers: {
 							'Content-Type': 'application/json',

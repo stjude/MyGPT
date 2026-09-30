@@ -103,3 +103,20 @@ When MyGPT Desktop or Docker backend is running, all REST APIs are served on `ht
 
 4. **In-App Developer Settings:**
    Inside the desktop app, go to **Settings > Developer / API** to view your active JWT access token, copy-paste ready-to-run Python snippets, or download Ollama models.
+
+## Runtime service settings
+
+**Settings > Developer / API > Runtime services** lets desktop users:
+
+- Change the backend and Ollama API base URLs without rebuilding the frontend.
+- Test the configured services through the status indicators.
+- Start the local `db`, `backend`, and `grobid` Docker Compose services.
+- Choose whether local backend containers start automatically with the app.
+
+Changing the Ollama URL while using a local Docker backend recreates the managed
+backend containers so the new `OLLAMA_SERVER` value takes effect. Docker controls
+are disabled for remote, HTTPS, or path-based backend URLs.
+
+Installed desktop builds use the published multi-architecture backend image and
+store Docker data and generated local credentials under Electron's per-user app
+data directory. Source checkouts continue to use the repository Compose file.

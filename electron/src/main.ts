@@ -4,10 +4,18 @@ import * as fs from 'fs'
 import { ProcessManager } from './process-manager'
 import { OllamaManager } from './ollama-manager'
 import { setupApplicationMenu } from './menu'
+import { RuntimeConfig, RuntimeConfigStore } from './runtime-config'
 
 let mainWindow: BrowserWindow | null = null
 const processManager = new ProcessManager('127.0.0.1', 8000)
 const ollamaManager = new OllamaManager('127.0.0.1', 11434)
+const runtimeConfigStore = new RuntimeConfigStore()
+
+function applyRuntimeConfig(config: RuntimeConfig): void {
+  processManager.setApiBaseUrl(config.backendUrl)
+  processManager.setOllamaUrl(config.ollamaUrl)
+  ollamaManager.setBaseUrl(config.ollamaUrl)
+}
 
 // Prevent multiple instances of the app
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
@@ -105,6 +113,60 @@ ipcMain.handle('get-api-base-url', () => {
   return processManager.getApiBaseUrl()
 })
 
+ipcMain.handle('get-runtime-config', () => runtimeConfigStore.load())
+
+ipcMain.handle('save-runtime-config', async (_event, config: RuntimeConfig) => {
+  try {
+    const previous = runtimeConfigStore.load()
+    const saved = runtimeConfigStore.save(config)
+    applyRuntimeConfig(saved)
+    setupApplicationMenu(processManager.getApiBaseUrl())
+    const ollamaChanged = previous.ollamaUrl !== saved.ollamaUrl
+    if (ollamaChanged && processManager.canManageDockerBackend()) {
+      const started = await processManager.startDockerBackend(true)
+      if (!started) {
+        return {
+          success: true,
+          config: saved,
+          warning: 'Settings were saved, but the backend containers could not be restarted.',
+        }
+      }
+      const ready = await processManager.waitForBackendReady()
+      if (!ready) {
+        return {
+          success: true,
+          config: saved,
+          warning: 'Settings were saved and containers restarted, but the backend did not become ready.',
+        }
+      }
+    }
+    return { success: true, config: saved }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('get-services-status', async () => {
+  const [backendRunning, ollamaRunning] = await Promise.all([
+    processManager.isBackendRunning(),
+    ollamaManager.isOllamaRunning(),
+  ])
+  return { backendRunning, ollamaRunning }
+})
+
+ipcMain.handle('start-backend-containers', async () => {
+  try {
+    const started = await processManager.startDockerBackend()
+    const ready = started && await processManager.waitForBackendReady()
+    return {
+      success: ready,
+      error: ready ? undefined : 'Docker started, but the backend did not become ready.',
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
 ipcMain.handle('get-ollama-status', async () => {
   const isRunning = await ollamaManager.isOllamaRunning()
   const models = isRunning ? await ollamaManager.getInstalledModels() : []
@@ -123,12 +185,16 @@ ipcMain.handle('pull-ollama-model', async (_event, modelName: string) => {
 // App Lifecycle
 app.whenReady().then(async () => {
   console.log('[Main] Initializing MyGPT Desktop...')
+  const runtimeConfig = runtimeConfigStore.load()
+  applyRuntimeConfig(runtimeConfig)
 
   // 1. Start Django backend
-  try {
-    await processManager.startBackend()
-  } catch (err) {
-    console.error('[Main] Failed to start Django backend:', err)
+  if (runtimeConfig.autoStartBackend && processManager.canManageDockerBackend()) {
+    try {
+      await processManager.startBackend()
+    } catch (err) {
+      console.error('[Main] Failed to start Django backend:', err)
+    }
   }
 
   // 2. Setup Application Menu with Developer API links

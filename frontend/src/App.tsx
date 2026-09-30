@@ -64,7 +64,7 @@ function App() {
 				'Content-Type': 'application/json'
 			}
 		}
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/frontend_settings/?format=json`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/frontend_settings/?format=json`, requestOptions)
 			.then(response => response.json())
 			.then(data => {
 				setFrontendSettings(data.settings)
@@ -102,7 +102,7 @@ function App() {
             'user_group': user.otherRoles?.length ? user.otherRoles[0] : ''
           })
         }
-        fetch(`${import.meta.env.VITE_BACKEND_API}api/get_datasets/?format=json`, requestOptions)
+        fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_datasets/?format=json`, requestOptions)
           .then(response => response.json())
           .then(data => {
             currentSettings.datasets = currentSettings.datasets.filter((d:any)=>d !== 'None')
@@ -130,7 +130,7 @@ function App() {
             })
           }
           if ((frontendSettings.django_login && localStorage.getItem('access')?.length) || !frontendSettings.django_login) {
-            fetch(`${import.meta.env.VITE_BACKEND_API}api/get_datasets/?format=json`, requestOptions)
+            fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_datasets/?format=json`, requestOptions)
             .then(response => {
               if(response.ok){
                 return response.json()

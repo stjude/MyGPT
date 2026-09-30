@@ -24,11 +24,13 @@ services:
       - ./backend/media:/media
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
       - ./.env_backend
+    environment:
+      OLLAMA_SERVER: ${OLLAMA_SERVER:-http://host.docker.internal:11434}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000"]
       interval: 30s

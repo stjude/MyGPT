@@ -16,6 +16,7 @@ import {
 	LockClosedIcon,
 	FingerPrintIcon
 } from '@heroicons/react/24/outline'
+import { applyRuntimeConfig, getRuntimeConfig, RuntimeConfig } from '../utils/runtimeConfig'
 
 interface DeveloperAPISettingsProps {
 	currentSettings: any
@@ -31,11 +32,28 @@ const RECOMMENDED_MODELS = [
 	{ name: 'bge-m3:latest', type: 'Embedding', desc: 'Multilingual multi-functionality embedding model' },
 ]
 
+const canManageDockerBackend = (value: string): boolean => {
+	try {
+		const endpoint = new URL(value)
+		return endpoint.protocol === 'http:' &&
+			['localhost', '127.0.0.1', '::1'].includes(endpoint.hostname.toLowerCase()) &&
+			(endpoint.pathname === '/' || endpoint.pathname === '')
+	} catch {
+		return false
+	}
+}
+
 export const DeveloperAPISettings: React.FC<DeveloperAPISettingsProps> = ({
 	currentSettings,
 	djangoLogin
 }) => {
-	const backendUrl = (import.meta.env.VITE_BACKEND_API || 'http://127.0.0.1:8000/').replace(/\/$/, '')
+	const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>(getRuntimeConfig())
+	const [runtimeDraft, setRuntimeDraft] = useState<RuntimeConfig>(runtimeConfig)
+	const [runtimeMessage, setRuntimeMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+	const [isSavingRuntime, setIsSavingRuntime] = useState(false)
+	const [isStartingBackend, setIsStartingBackend] = useState(false)
+	const backendUrl = runtimeConfig.backendUrl
+	const ollamaUrl = runtimeConfig.ollamaUrl
 	const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null)
 	const [copiedToken, setCopiedToken] = useState(false)
 	const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
@@ -60,6 +78,58 @@ export const DeveloperAPISettings: React.FC<DeveloperAPISettingsProps> = ({
 	const [backendOnline, setBackendOnline] = useState<boolean | null>(null)
 
 	const [jwtAccessToken, setJwtAccessToken] = useState<string>(localStorage.getItem('access') || '')
+
+	const saveRuntimeSettings = async () => {
+		setIsSavingRuntime(true)
+		setRuntimeMessage(null)
+		try {
+			let saved = runtimeDraft
+			let warning: string | undefined
+			if (window.electronAPI?.saveRuntimeConfig) {
+				const result = await window.electronAPI.saveRuntimeConfig(runtimeDraft)
+				if (!result.success || !result.config) {
+					throw new Error(result.error || 'Unable to save runtime settings.')
+				}
+				saved = result.config
+				warning = result.warning
+			} else {
+				for (const [label, value] of [['Backend URL', runtimeDraft.backendUrl], ['Ollama URL', runtimeDraft.ollamaUrl]]) {
+					const parsed = new URL(value)
+					if (!['http:', 'https:'].includes(parsed.protocol)) {
+						throw new Error(`${label} must use HTTP or HTTPS.`)
+					}
+				}
+			}
+			applyRuntimeConfig(saved)
+			setRuntimeConfig(saved)
+			setRuntimeDraft(saved)
+			setRuntimeMessage({
+				type: warning ? 'error' : 'success',
+				text: warning || 'Runtime endpoints saved and applied.',
+			})
+			setTimeout(checkOllamaStatus, 0)
+		} catch (error: any) {
+			setRuntimeMessage({ type: 'error', text: error.message })
+		} finally {
+			setIsSavingRuntime(false)
+		}
+	}
+
+	const startBackendContainers = async () => {
+		if (!window.electronAPI?.startBackendContainers) return
+		setIsStartingBackend(true)
+		setRuntimeMessage(null)
+		try {
+			const result = await window.electronAPI.startBackendContainers()
+			if (!result.success) throw new Error(result.error || 'Unable to start backend containers.')
+			setRuntimeMessage({ type: 'success', text: 'Backend containers started successfully.' })
+			await checkOllamaStatus()
+		} catch (error: any) {
+			setRuntimeMessage({ type: 'error', text: error.message })
+		} finally {
+			setIsStartingBackend(false)
+		}
+	}
 
 	const copyToClipboard = (text: string, id: string) => {
 		navigator.clipboard.writeText(text)
@@ -177,7 +247,7 @@ export const DeveloperAPISettings: React.FC<DeveloperAPISettingsProps> = ({
 			} else {
 				// Fallback to direct local Ollama check
 				try {
-					const directRes = await fetch('http://127.0.0.1:11434/api/tags')
+					const directRes = await fetch(`${ollamaUrl}/api/tags`)
 					if (directRes.ok) {
 						const directData = await directRes.json()
 						const names = (directData.models || []).map((m: any) => m.name)
@@ -199,7 +269,9 @@ export const DeveloperAPISettings: React.FC<DeveloperAPISettingsProps> = ({
 
 	useEffect(() => {
 		checkOllamaStatus()
-	}, [])
+		// Recheck after a saved endpoint changes.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [backendUrl, ollamaUrl])
 
 	const handlePullModel = async (modelName: string) => {
 		if (!modelName.trim()) return
@@ -356,7 +428,72 @@ print("Upload status:", res.json())`
 				</div>
 			</div>
 
-			{/* Server & Status Banner */}
+			{window.electronAPI?.isDesktop && (
+				<div className="bg-white dark:bg-panel3-dark/40 border border-gray-200 dark:border-gray-700 p-4 rounded-lg shadow-sm space-y-4">
+					<div>
+						<h3 className="text-base font-bold">Runtime services</h3>
+						<p className="text-xs text-gray-500 dark:text-gray-400">
+							Configure the API endpoints used by the app. A local Ollama change restarts the managed backend containers so the backend receives the new endpoint.
+						</p>
+					</div>
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+						<label className="text-xs font-semibold">
+							Backend API URL
+							<input
+								type="url"
+								value={runtimeDraft.backendUrl}
+								onChange={(event) => setRuntimeDraft({ ...runtimeDraft, backendUrl: event.target.value })}
+								className="mt-1 w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-black/40 font-mono font-normal"
+								placeholder="http://127.0.0.1:8000"
+							/>
+						</label>
+						<label className="text-xs font-semibold">
+							Ollama API URL
+							<input
+								type="url"
+								value={runtimeDraft.ollamaUrl}
+								onChange={(event) => setRuntimeDraft({ ...runtimeDraft, ollamaUrl: event.target.value })}
+								className="mt-1 w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-black/40 font-mono font-normal"
+								placeholder="http://127.0.0.1:11434"
+							/>
+						</label>
+					</div>
+					<label className="flex items-center gap-2 text-xs">
+						<input
+							type="checkbox"
+							checked={runtimeDraft.autoStartBackend}
+							disabled={!canManageDockerBackend(runtimeDraft.backendUrl)}
+							onChange={(event) => setRuntimeDraft({ ...runtimeDraft, autoStartBackend: event.target.checked })}
+						/>
+						Start local backend containers automatically when the desktop app launches
+					</label>
+					<div className="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={saveRuntimeSettings}
+							disabled={isSavingRuntime}
+							className="bg-panel1 hover:bg-nav disabled:opacity-50 text-white px-3 py-2 rounded-md text-xs font-semibold"
+						>
+							{isSavingRuntime ? 'Saving and applying...' : 'Save endpoints'}
+						</button>
+						<button
+							type="button"
+							onClick={startBackendContainers}
+							disabled={isStartingBackend || !canManageDockerBackend(runtimeConfig.backendUrl)}
+							className="bg-gray-200 dark:bg-gray-700 disabled:opacity-50 px-3 py-2 rounded-md text-xs font-semibold flex items-center gap-1.5"
+						>
+							<ArrowPathIcon className={`h-4 w-4 ${isStartingBackend ? 'animate-spin' : ''}`} />
+							{isStartingBackend ? 'Starting...' : 'Start backend containers'}
+						</button>
+						{runtimeMessage && (
+							<span className={`text-xs ${runtimeMessage.type === 'success' ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
+								{runtimeMessage.text}
+							</span>
+						)}
+					</div>
+				</div>
+			)}
+
 			<div className="bg-white dark:bg-panel3-dark/40 border border-gray-200 dark:border-gray-700 p-4 rounded-lg shadow-sm">
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<div className="flex items-center gap-3">
@@ -374,7 +511,7 @@ print("Upload status:", res.json())`
 							</span>
 						) : backendOnline === false ? (
 							<span className="text-xs bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
-								<XCircleIcon className="h-3.5 w-3.5" /> Backend Offline (127.0.0.1:8000)
+								<XCircleIcon className="h-3.5 w-3.5" /> Backend Offline ({backendUrl})
 							</span>
 						) : (
 							<span className="text-xs bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-full font-semibold">

@@ -19,6 +19,8 @@ extraResources:
     to: backend_binary
     filter:
       - "**/*"
+  - from: docker-compose.desktop.yml
+    to: docker/docker-compose.yml
 
 mac:
   category: public.app-category.productivity
