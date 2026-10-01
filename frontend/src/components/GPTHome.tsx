@@ -158,10 +158,21 @@ function GPTHome(props:{
 		let isMounted = true
 		const controller = new AbortController()
 		fetchAndRegisterOllamaModels(props.frontendSettings, controller.signal)
-			.then(llms => { if (isMounted) setLlms(llms) })
+			.then(llms => {
+				if (!isMounted) return
+				setLlms(llms)
+				if (!llms.includes(props.currentSettings.selectedLlm)) {
+					props.settingsCallback({
+						...props.currentSettings,
+						llms,
+						selectedLlm: llms[0] || '',
+					})
+				}
+			})
 			.catch((error) => { if (error?.name !== 'AbortError') console.error(error) })
 		return () => { isMounted = false; controller.abort() }
-	},[props.frontendSettings, props.frontendSettings.django_login])
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	},[props.frontendSettings, props.frontendSettings.django_login, props.currentSettings.runtimeRevision])
 
 	// keep dataset language synced with the selected dataset
 	useEffect(() => {
@@ -956,11 +967,11 @@ function GPTHome(props:{
 	}
 
 	return (
-		<div className='p-4 bg-gray-200 dark:bg-neutral-800 max-w-[2000px] mx-auto h-[94vh]'>
-			<div className='mt-24 pb-24 h-full flex w-full items-stretch'>
+		<div className='p-4 pt-28 pb-3 bg-gray-200 dark:bg-neutral-800 max-w-[2000px] w-full mx-auto flex-1 min-h-0 flex flex-col overflow-hidden'>
+			<div className='flex-1 min-h-0 flex w-full items-stretch overflow-hidden'>
 			{/* Panel for Chat */}
 			{!answerWithoutContext && panelCollapsed.left ? (
-				<div style={{ width: `${panelWidths.left}%` }} className='bg-panel3 mx-2 dark:bg-panel2-dark rounded-lg h-full flex flex-col items-center justify-start relative pt-2'>
+				<div style={{ width: `${panelWidths.left}%` }} className='bg-panel3 mx-2 dark:bg-panel2-dark rounded-lg h-full min-h-0 flex flex-col items-center justify-start relative pt-2'>
 					<button
 						title='Expand Chat panel'
 						className='absolute mx-auto top-2 p-2 rounded-md bg-white dark:bg-stjude dark:text-white text-nav'
@@ -974,7 +985,7 @@ function GPTHome(props:{
 			) : (
 			<div
 				style={{ width: answerWithoutContext ? '100%' : `${panelWidths.left}%` }}
-				className='p-6 mr-2 bg-panel3 dark:bg-panel2-dark rounded-lg h-full overflow-y-auto duration-300 ease-in-out relative'
+				className='p-6 mr-2 bg-panel3 dark:bg-panel2-dark rounded-lg h-full max-h-full min-h-0 overflow-y-auto duration-300 ease-in-out relative flex flex-col'
 			>
 				{!answerWithoutContext ? (
 					<button
@@ -1337,7 +1348,7 @@ function GPTHome(props:{
 												user_comment: feedback.user_comment,
 											})
 										}
-										fetch(`${import.meta.env.VITE_BACKEND_API}api/feedback/?format=json`, requestOptions)
+										fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/feedback/?format=json`, requestOptions)
 											.then(response => response.json())
 											.then(data => {
 												console.log(data)
@@ -1507,7 +1518,7 @@ function GPTHome(props:{
 			<>
 			{/* Panel for list of documents for the selected library */}				
 			{panelCollapsed.middle ? (
-				<div style={{ width: `${panelWidths.middle}%` }} className='bg-panel1 dark:bg-panel4-dark rounded-l-lg h-full flex flex-col items-center justify-start relative pt-2'>
+				<div style={{ width: `${panelWidths.middle}%` }} className='bg-panel1 dark:bg-panel4-dark rounded-l-lg h-full min-h-0 flex flex-col items-center justify-start relative pt-2'>
 					<button
 						title='Expand library panel'
 						className='absolute mx-auto top-2 p-2 rounded-md bg-white dark:bg-stjude dark:text-white text-nav'
@@ -1519,7 +1530,7 @@ function GPTHome(props:{
 					<div className='text-xl mt-4 text-white [writing-mode:vertical-rl] rotate-180'>Library</div>
 				</div>
 			) : (
-			<div style={{ width: `${panelWidths.middle}%` }} className='bg-panel1 dark:bg-panel4-dark rounded-l-lg h-full overflow-y-auto duration-300 ease-in-out relative'>
+			<div style={{ width: `${panelWidths.middle}%` }} className='bg-panel1 dark:bg-panel4-dark rounded-l-lg h-full max-h-full min-h-0 overflow-y-auto duration-300 ease-in-out relative flex flex-col'>
 				<button
 					title='Collapse library panel'
 					className='absolute right-2 top-2 p-1 rounded-md bg-white dark:bg-stjude dark:text-white text-nav z-10'
@@ -1657,8 +1668,8 @@ function GPTHome(props:{
 					<div className='text-xl mt-4 text-nav dark:text-white [writing-mode:vertical-rl] rotate-180'>Document Viewer</div>
 				</div>
 			) : (
-			<div style={{ width: `${panelWidths.right}%` }} className='bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-r-lg h-full overflow-hidden duration-300 ease-in-out relative flex flex-col shadow-sm'>
-				<div className='flex-1 overflow-hidden flex flex-row w-full pdf-viewer-row bg-gray-100 dark:bg-gray-900'>
+			<div style={{ width: `${panelWidths.right}%` }} className='bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-r-lg h-full max-h-full min-h-0 overflow-hidden duration-300 ease-in-out relative flex flex-col shadow-sm'>
+				<div className='flex-1 min-h-0 h-full overflow-hidden flex flex-row w-full pdf-viewer-row bg-gray-100 dark:bg-gray-900'>
 					{/* Left icon sidebar */}
 					<div className='flex flex-col items-center gap-1 py-2 px-0.5 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shrink-0'>
 						<button
@@ -1701,7 +1712,7 @@ function GPTHome(props:{
 						/>
 					)}
 					{/* Main content: toolbar + document */}
-					<div className='flex flex-col flex-1 overflow-hidden'>
+					<div className='flex flex-col flex-1 min-h-0 h-full overflow-hidden'>
 						{papers.length && viewerFileUrl ?
 							<>
 								{/* Toolbar matching original layout: search | zoom | page nav | fullscreen | download */}
@@ -1725,7 +1736,7 @@ function GPTHome(props:{
 										<button className='p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700' title='Collapse viewer panel' onClick={() => collapsePanel('right')}><ArrowsPointingInIcon className='w-4 h-4' /></button>
 									</div>
 								</div>
-								<div ref={scrollAreaRef} className='overflow-auto flex-1 pdf-scroll-area bg-[#bfbcba] dark:bg-[#033f52]'>
+								<div ref={scrollAreaRef} className='overflow-auto flex-1 min-h-0 h-full pdf-scroll-area bg-[#bfbcba] dark:bg-[#033f52]'>
 									<div className='flex flex-col items-center py-4 gap-3'>
 										<Document key={viewerFileUrl} file={viewerFileUrl} onLoadSuccess={({ numPages }: { numPages: number }) => setNumPages(numPages)} onLoadError={() => setNumPages(0)}>
 											{numPages > 0 && Array.from({ length: numPages }, (_, i) => (

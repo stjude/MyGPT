@@ -1,3 +1,11 @@
+import chatWithDocImg from '../assets/Chat_with_document.png'
+import chatWoDocDropdownImg from '../assets/Chat_wo_document_dropdown.png'
+import chatWoDocImg from '../assets/Chat_wo_document.png'
+import dropdownImg1 from '../assets/Dropdown_Image.png'
+import dropdownImg2 from '../assets/Dropdown_Image_2.png'
+import mygptChatSettingImg from '../assets/MyGPT_chat_setting.png'
+import mygptUploadMenuImg from '../assets/MyGPT_upload_menu.png'
+
 interface FAQItem {
 	question: string;
 	answer: string;
@@ -36,7 +44,7 @@ interface FAQItem {
 		{
 			"question": "3. Can I use MyGPT to chat with LLM without incorporating documents pipeline (RAG), like ChatGPT?",
 			"answer": "You can use MyGPT to chat directly with LLM without the RAG pipeline. At the top of the Chat panel, you can use the drop-down to switch from \"Chat with Documents\" to \"Direct chat with GPTs\". In this case, MyGPT will use LLM’s inherent knowledge to answer users' questions.",
-		    "image": ["./Chat_with_document.png", "./Chat_wo_document_dropdown.png", "./Chat_wo_document.png"]
+		    "image": [chatWithDocImg, chatWoDocDropdownImg, chatWoDocImg]
 		},
 		{
 		   "question": "4. What happens if the information to answer the question is not available in my library?",
@@ -53,7 +61,7 @@ interface FAQItem {
 		{
 			"question": "7. If there is information on my library that is outdated or inconsistent with public information  available on the internetfacts available in public domain, will MyGPT detect the inconsistency?",
 			"answer": "MyGPT is designed to perform question-answering in the context of your library of documents and will hold the information from your documents as the highest truth. If the  information in your document is outdated compared to facts in the public domain, MyGPT will answer them using only information from your documents. If the LLM has more up-to-date information about your question, the answer relevance score (ARS) and hallucination  index (HI) may be able to guide you. MyGPT also provides answers generated without the  RAG pipeline as the drop-down with the original MyGPT-generated answers. You can  compare that answer with an original answer to verify the discrepancy in relevance scores.  However, if the most up-to-date information about your topic is also missing from LLM training data, MyGPT will answer it only using information from your documents",
-		    "image": ["./Dropdown_Image.png", "./Dropdown_Image_2.png"]
+		    "image": [dropdownImg1, dropdownImg2]
 		},
 		{
 			"question": "8. If the answer is related to up-to-date information that is contained in my library but that was missing from the training data used for the LLM being used, will MyGPT be able to answer accurately?",
@@ -76,7 +84,7 @@ interface FAQItem {
 		{
 			"question": "17. Can I change the calculations of QRS, ARS, and HI?",
 			"answer": "Yes. The default formulas and weights are provided in the paper/software, but they are not the only option. You can tune the QRS weights (a,b,c), ARS weights (x,y,z), and related thresholds from chat settings, or re-run optimization on your own dataset.",
-			"image": "./MyGPT_chat_setting.png"
+			"image": mygptChatSettingImg
 		},
 		{
 			"question": "18. I am asking a question, and it is about a topic in the library, but it gives me 0% relevance. Is it possible to relax the cutoff values for QRS?",
@@ -175,7 +183,7 @@ interface FAQItem {
 		{
 			"question": "40. What are the customizations offered by MyGPT?",
 			"answer": "MyGPT is modular and configurable across the full pipeline:<br/>- Preprocessing/chunking strategy and overlap<br/>- Embedding model and retrieval distance function<br/>- Vector/keyword search settings<br/>- Reranker and relevance scoring options<br/>- LLM choice and creativity controls (temperature, top-k/p)<br/>- Context protocol and transparency settings (QRS/ARS/HI with citations)",
-			"image": ["./MyGPT_upload_menu.png", "./MyGPT_chat_setting.png"]
+			"image": [mygptUploadMenuImg, mygptChatSettingImg]
 		},
 		{
 			"question": "41. Can you suggest any ideal customizations for MyGPT?",

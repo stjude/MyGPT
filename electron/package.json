@@ -1,0 +1,37 @@
+{
+  "name": "MyGPT-desktop",
+  "version": "1.0.2",
+  "description": "MyGPT - Privacy-First Retrieval-Augmented Generation Desktop Application",
+  "main": "dist/main.js",
+  "author": "St. Jude Children's Research Hospital",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:frontend\" \"wait-on http://localhost:3000 && npm run dev:electron\"",
+    "dev:frontend": "cd ../frontend && npm run dev",
+    "dev:electron": "tsc && electron .",
+    "build:frontend": "cd ../frontend && npm run build",
+    "build:ts": "tsc",
+    "build": "npm run build:frontend && npm run build:ts",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && cross-env CUSTOM_DMGBUILD_PATH=./scripts/dmgbuild-with-retries.js DMGBUILD_DETACH_RETRIES=6 electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "docker:up": "cd .. && docker compose up -d db backend grobid",
+    "docker:down": "cd .. && docker compose down",
+    "docker:logs": "cd .. && docker compose logs -f backend",
+    "docker:build": "cd .. && docker compose build backend"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^44.1.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.7.3",
+    "wait-on": "^8.0.2"
+  }
+}

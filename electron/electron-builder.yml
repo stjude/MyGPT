@@ -1,0 +1,59 @@
+appId: org.stjude.mygpt
+productName: MyGPT-spark
+copyright: Copyright © 2026 St. Jude Children's Research Hospital
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - package.json
+  - from: ../frontend/build
+    to: frontend_build
+    filter:
+      - "**/*"
+
+extraResources:
+  - from: ../backend/dist_desktop/mygpt-backend
+    to: backend_binary
+    filter:
+      - "**/*"
+  - from: docker-compose.desktop.yml
+    to: docker/docker-compose.yml
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  filesystem: APFS
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Office

@@ -591,7 +591,7 @@ const FlowUpload = (props: {
             body: formData
         }
         
-        fetch(`${import.meta.env.VITE_BACKEND_API}api/upload_documents/`, requestOptions)
+        fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/upload_documents/`, requestOptions)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Upload failed')

@@ -1,4 +1,19 @@
-[![backend CI](https://github.com/stjude/MyGPT/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/stjude/MyGPT/actions/workflows/backend-ci.yml) [![frontend CI](https://github.com/stjude/MyGPT/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/stjude/MyGPT/actions/workflows/frontend-ci.yml) [![Build Backend Docker Image](https://github.com/stjude/MyGPT/actions/workflows/backend-docker-image.yml/badge.svg)](https://github.com/stjude/MyGPT/actions/workflows/backend-docker-image.yml) [![Frontend Docker Image](https://github.com/stjude/MyGPT/actions/workflows/frontend-docker-image.yml/badge.svg)](https://github.com/stjude/MyGPT/actions/workflows/frontend-docker-image.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22165249.svg)](https://doi.org/10.5281/zenodo.22165249)
+<div align="center">
+	<p>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/backend-ci.yml"><img src="https://github.com/stjude/MyGPT/actions/workflows/backend-ci.yml/badge.svg" alt="Backend CI"></a>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/frontend-ci.yml"><img src="https://github.com/stjude/MyGPT/actions/workflows/frontend-ci.yml/badge.svg" alt="Frontend CI"></a>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/backend-docker-image.yml"><img src="https://github.com/stjude/MyGPT/actions/workflows/backend-docker-image.yml/badge.svg" alt="Build Backend Docker Image"></a>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/frontend-docker-image.yml"><img src="https://github.com/stjude/MyGPT/actions/workflows/frontend-docker-image.yml/badge.svg" alt="Build Frontend Docker Image"></a>
+	</p>
+	<p>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/github-code-scanning/codeql"><img src="https://github.com/stjude/MyGPT/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL"></a>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/agents/copilot-pull-request-reviewer"><img src="https://github.com/stjude/MyGPT/actions/workflows/agents/copilot-pull-request-reviewer/badge.svg" alt="Copilot"></a>
+		<a href="https://github.com/stjude/MyGPT/actions/workflows/dependabot/update-graph"><img src="https://github.com/stjude/MyGPT/actions/workflows/dependabot/update-graph/badge.svg" alt="Dependency Graph"></a>
+	</p>
+	<p>
+		<a href="https://doi.org/10.5281/zenodo.22165249"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.22165249.svg" alt="DOI"></a>
+	</p>
+</div>
 
 <!-- make div and show logo in middle -->
 <div align="center" style='padding:20px;'>
@@ -31,9 +46,18 @@ Replace the placeholders in `.env_backend` with secure values and configure publ
 
 MyGPT can be installed on following environments:
 
+- [Desktop Application (macOS / Windows / Linux)](#desktop-application)
 - [Personal Computer](#personal-computer)
 - [Server/VM with GPU](#server-or-vm-with-gpu)
 - [Cloud services (Azure)](#cloud-services-azure)
+
+### Desktop Application
+
+MyGPT provides a native desktop application with modern window management, local Docker orchestration, and in-app developer settings:
+
+* **macOS Local Install:** Download the `.dmg` from releases. See [macOS Installation & Setup Guide](./electron/MACOS_INSTALL_GUIDE.md) for quick setup, Ollama models, and Gatekeeper instructions.
+* **Remote VM & Cloud Connected Desktop Apps:** See [Remote VM & Cloud Desktop Guide](./electron/REMOTE_CLOUD_DESKTOP_GUIDE.md) to build and distribute lightweight desktop apps connected to remote GPU servers or Azure/AWS/GCP deployments.
+* **Packaging & Development:** See [electron/README.md](./electron/README.md) for build, test, and packaging scripts.
 
 ### Personal Computer
 

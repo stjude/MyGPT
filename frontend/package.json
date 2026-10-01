@@ -1,7 +1,7 @@
 {
   "name": "mygpt",
   "homepage": "https://svlpmygptfrnd01.stjude.org/",
-  "version": "0.1.0",
+  "version": "1.0.2",
   "private": true,
   "dependencies": {
     "@azure/msal-react": "^5.6.0",

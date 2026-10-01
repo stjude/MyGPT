@@ -29,7 +29,7 @@ export const fetchDatasets = async (
 		),
 		signal,
 	}
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_datasets/`, requestOptions)
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_datasets/`, requestOptions)
 	return response.json()
 }
 
@@ -50,7 +50,7 @@ export const deleteDatasetRequest = async (
 		signal,
 	}
 	const response = await fetch(
-		`${import.meta.env.VITE_BACKEND_API}api/delete_dataset/?dataset=${encodeURIComponent(dataset)}&user_email=${encodeURIComponent(userEmail)}`,
+		`${window.mygptRuntimeConfig.backendApiUrl}api/delete_dataset/?dataset=${encodeURIComponent(dataset)}&user_email=${encodeURIComponent(userEmail)}`,
 		requestOptions
 	)
 	return response.json()
@@ -62,7 +62,7 @@ export const addEmbeddingForDatasetRequest = async (
 	signal?: AbortSignal
 ): Promise<any> => {
 	const response = await fetch(
-		`${import.meta.env.VITE_BACKEND_API}api/add_dataset_embeddings/?dataset=${encodeURIComponent(dataset)}`,
+		`${window.mygptRuntimeConfig.backendApiUrl}api/add_dataset_embeddings/?dataset=${encodeURIComponent(dataset)}`,
 		{ method: 'GET', headers: { 'Content-Type': 'application/json' }, signal }
 	)
 	return response.json()
@@ -84,7 +84,7 @@ export const updateDatasetRequest = async (
 		body: JSON.stringify(requestBody),
 		signal,
 	}
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/update_dataset/?format=json`, requestOptions)
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/update_dataset/?format=json`, requestOptions)
 	return response.json()
 }
 
@@ -113,7 +113,7 @@ export const getDatasetDetailsRequest = async (
 		signal,
 	}
 
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_dataset_details/?format=json`, requestOptions)
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_dataset_details/?format=json`, requestOptions)
 	return response.json()
 }
 
@@ -124,7 +124,7 @@ export const fetchAndRegisterOllamaModels = async (
 	djangoLogin: any,
 	signal?: AbortSignal
 ): Promise<{ llms: string[]; llm: string }> => {
-	const tagsResponse = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_ollama_models/`, {
+	const tagsResponse = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
 		method: 'POST',
 		signal,
 	})
@@ -150,7 +150,7 @@ export const fetchAndRegisterOllamaModels = async (
 		signal,
 	}
 	const response2 = await fetch(
-		`${import.meta.env.VITE_BACKEND_API}api/add_ollama_models/`,
+		`${window.mygptRuntimeConfig.backendApiUrl}api/add_ollama_models/`,
 		registerOptions
 	)
 	const data2 = await response2.json()

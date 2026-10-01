@@ -19,14 +19,19 @@ from django.conf.urls.static import static
 from django.conf import settings
 from testdb.views import apis
 from rest_framework_simplejwt import views as jwt_views
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 urlpatterns = [
     path('', include('testdb.urls')),
     path('evaluation_dataset/', include('evaluation_dataset.urls')),
     path('admin/', admin.site.urls),
-	path('token/', jwt_views.TokenObtainPairView.as_view(), name ='token_obtain_pair'),
-     path('token/refresh/',  jwt_views.TokenRefreshView.as_view(), name ='token_refresh'),
+    path('token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('media/<path:file_path>/', apis.secure_media, name='secure_media'),
+    # OpenAPI 3.0 and Interactive API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
 
 if settings.DEBUG:

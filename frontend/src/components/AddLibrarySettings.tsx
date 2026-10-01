@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { DropdownOptions } from './DropDownMenu'
+import defaultSettings from '../utils/DefaultState'
 
 const AddLibrarySettings = (props: {
 	currentSettings: any,
@@ -61,7 +62,24 @@ const AddLibrarySettings = (props: {
 	const [uploadStage, setUploadStage] = useState('')
 	const [uploadProgressMessage, setUploadProgressMessage] = useState('')
 	const [uploadSettingsMode, setUploadSettingsMode] = useState('Default settings')
-	const currentSettings = JSON.parse(JSON.stringify(props.currentSettings))
+
+	const safeClone = (obj: any) => {
+		if (!obj) return {}
+		try {
+			return JSON.parse(JSON.stringify(obj))
+		} catch {
+			const stripped: any = {}
+			for (const key of Object.keys(obj)) {
+				try {
+					stripped[key] = JSON.parse(JSON.stringify(obj[key]))
+				} catch {
+					stripped[key] = obj[key]
+				}
+			}
+			return stripped
+		}
+	}
+	const currentSettings = safeClone(props.currentSettings || defaultSettings)
 
 	const [videoLibraryName, setVideoLibraryName] = useState('')
 	const [videoLibrary, setVideoLibrary] = useState(false)
@@ -223,7 +241,7 @@ const AddLibrarySettings = (props: {
 			body: formData
 		}
 
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/add_zotero_collection/`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_zotero_collection/`, requestOptions)
 		.then(response => response.json())
 		.then(data => {
 			props.settingsCallback({...currentSettings, fetchDatasets: true, datasetsUpdated: true})
@@ -306,7 +324,7 @@ const AddLibrarySettings = (props: {
 			setUploadStage('uploading')
 			setUploadProgressMessage('Starting upload...')
 
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/upload_documents/`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/upload_documents/`, requestOptions)
 			.then(response => {
 				// Handle streaming response
 				if (!response.ok) {
@@ -403,7 +421,7 @@ const AddLibrarySettings = (props: {
 					},
 				body: formData
 			}
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/add_video_library/`, requestOptions)
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_video_library/`, requestOptions)
 			.then(response => response.json())
 			.then(data => {
 				props.settingsCallback({...currentSettings, fetchDatasets: true, datasetsUpdated: true})
@@ -555,7 +573,7 @@ const AddLibrarySettings = (props: {
 						<div className='text-nav dark:text-nav-dark w-48 p-1'>Embedding Model*</div>
 						<DropdownOptions
 							width={'280px'}
-							optionsList={props.currentSettings.embedding_models}
+							optionsList={props.currentSettings?.embedding_models || defaultSettings.embedding_models}
 							defaultOption={currentSettings.selectedEmbeddingModel}
 							dropDownCallback={(option:string)=>{
 								props.settingsCallback({...currentSettings, selectedEmbeddingModel: option})
@@ -762,7 +780,7 @@ const AddLibrarySettings = (props: {
 								<div className='text-nav dark:text-nav-dark p-1 w-48'>Embedding model</div>
 								<DropdownOptions
 									width={'270px'}
-									optionsList={props.currentSettings.embedding_models}
+									optionsList={props.currentSettings?.embedding_models || defaultSettings.embedding_models}
 									defaultOption={currentSettings.selectedEmbeddingModel}
 									dropDownCallback={(option:string)=>{
 										props.settingsCallback({...currentSettings, selectedEmbeddingModel: option})

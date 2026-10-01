@@ -1,70 +1,158 @@
 import { useState, useEffect } from 'react'
+import stJudeLogo from '../assets/stjude-logo-child.png'
 
 const Footer = (props: {
 	frontendSettings: any,
 	onDisclaimerClick: () => void,
 	onFAQClick: () => void,
 }) => {
-	const version = import.meta.env.VITE_MYGPT_VERSION || '1.0.1'
+	const version = import.meta.env.VITE_MYGPT_VERSION || '1.0.2'
 	const year = new Date().getFullYear()
+	const backendEndpoint = window.mygptRuntimeConfig.backendApiUrl.replace(/\/+$/, '')
+	const ollamaEndpoint = window.mygptRuntimeConfig.ollamaApiUrl.replace(/\/+$/, '')
 
 	const [backendUp, setBackendUp] = useState<boolean | null>(null)
 	const [ollamaUp, setOllamaUp] = useState<boolean | null>(null)
 
 	useEffect(() => {
 		let isMounted = true
-		const check = async () => {
-			try {
-				const r = await fetch(`${import.meta.env.VITE_BACKEND_API}api/frontend_settings/?format=json`, { method: 'GET' })
-				if (isMounted) setBackendUp(r.ok)
-			} catch {
-				if (isMounted) setBackendUp(false)
+
+		const checkConnections = async () => {
+			let isOllamaOnline = false
+			let isBackendOnline = false
+
+			// 1. Check Ollama via Electron IPC if running in desktop app
+			if ((window as any).electronAPI?.getOllamaStatus) {
+				try {
+					const status = await (window as any).electronAPI.getOllamaStatus()
+					if (status?.isRunning) {
+						isOllamaOnline = true
+					}
+				} catch {
+					// Fall through to HTTP check
+				}
 			}
+
+			const backendUrl = (window.mygptRuntimeConfig.backendApiUrl || 'http://localhost:8000/').replace(/\/$/, '')
+			const ollamaUrl = (window.mygptRuntimeConfig.ollamaApiUrl || 'http://localhost:11434/').replace(/\/$/, '')
+
+			// 2. Check Backend API health
 			try {
-				const r = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_ollama_models/`, { method: 'POST' })
-				const data = await r.json()
-				const hasModelList = Array.isArray(data?.models)
-				if (isMounted) setOllamaUp(r.ok && hasModelList)
+				const r = await fetch(`${backendUrl}/api/frontend_settings/?format=json`, { method: 'GET' })
+				isBackendOnline = r.ok
 			} catch {
-				if (isMounted) setOllamaUp(false)
+				isBackendOnline = false
+			}
+
+			// 3. Check Ollama via Backend API or direct localhost:11434
+			if (!isOllamaOnline) {
+				try {
+					const r = await fetch(`${backendUrl}/api/get_ollama_models/`, { method: 'POST' })
+					if (r.ok) {
+						const data = await r.json()
+						isOllamaOnline = Array.isArray(data?.models) && data.models.length > 0
+					} else {
+						const directRes = await fetch(`${ollamaUrl}/api/tags`)
+						isOllamaOnline = directRes.ok
+					}
+				} catch {
+					try {
+						const directRes = await fetch(`${ollamaUrl}/api/tags`)
+						isOllamaOnline = directRes.ok
+					} catch {
+						isOllamaOnline = false
+					}
+				}
+			}
+
+			if (isMounted) {
+				setBackendUp(isBackendOnline)
+				setOllamaUp(isOllamaOnline)
 			}
 		}
-		check()
-		return () => { isMounted = false }
+
+		checkConnections()
+		const interval = setInterval(checkConnections, 10000)
+		return () => {
+			isMounted = false
+			clearInterval(interval)
+		}
 	}, [])
 
-	const StatusDot = ({ up, label }: { up: boolean | null; label: string }) => (
-		<div className='flex items-center gap-1'>
-			<span
-				className={`inline-block w-2 h-2 rounded-full ${
-					up === null ? 'bg-gray-400' : up ? 'bg-green-400' : 'bg-red-400'
+	const StatusPill = ({ up, label, endpoint }: { up: boolean | null; label: string; endpoint: string }) => {
+		const isOnline = up === true
+		const isOffline = up === false
+		const isChecking = up === null
+
+		return (
+			<div
+				className={`group relative flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 ${
+					isOnline
+						? 'bg-emerald-900/60 text-emerald-200 border border-emerald-500/40 shadow-sm'
+						: isOffline
+						? 'bg-rose-900/60 text-rose-200 border border-rose-500/40 shadow-sm'
+						: 'bg-gray-800/60 text-gray-300 border border-gray-600/30'
 				}`}
-			/>
-			<span className='opacity-70'>{label}</span>
-		</div>
-	)
+				tabIndex={0}
+				aria-describedby={`${label.toLowerCase()}-endpoint-tooltip`}
+			>
+				<span
+					className={`w-2 h-2 rounded-full ${
+						isOnline
+							? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse'
+							: isOffline
+							? 'bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.8)]'
+							: 'bg-gray-400 animate-spin'
+					}`}
+				/>
+				<span>{label}: {isOnline ? 'Online' : isOffline ? 'Offline' : '...'}</span>
+				<span
+					id={`${label.toLowerCase()}-endpoint-tooltip`}
+					role='tooltip'
+					className='pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 break-all rounded bg-gray-900 px-2 py-1.5 text-left text-xs font-normal text-white opacity-0 shadow-lg group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100'
+				>
+					{label} endpoint: {endpoint}
+				</span>
+			</div>
+		)
+	}
 
 	return (
-		<div className='flex justify-between text-nav bg-[#2A4759] my-auto py-4 h-[6vh]'>
-			<div className='text-sm text-white mx-8 my-auto flex flex-row items-center gap-3'>
-				{/* <p className='inline-block mx-2'>Designed by </p> */}
-				<img src='/stjude-logo-child.png' alt='St. Jude logo' className='h-[3vh] inline-block'/>
-				<p className='inline-block'>St. Jude Children's Research Hospital</p>
-				<p className='inline-block opacity-60'>© {year}</p>
+		<footer className='flex justify-between items-center text-nav bg-[#2A4759] px-6 py-2 min-h-[48px] shrink-0 z-30 border-t border-slate-700/40 select-none'>
+			{/* Left: Organization Branding */}
+			<div className='text-xs text-white/90 flex flex-row items-center gap-2.5'>
+				<img src={stJudeLogo} alt='St. Jude logo' className='h-5 w-auto object-contain inline-block' />
+				<span className='font-medium'>St. Jude Children's Research Hospital</span>
+				<span className='text-white/50'>© {year}</span>
 			</div>
-            <div className='text-sm text-white mx-8 my-auto cursor-pointer flex flex-row items-center gap-4'>
-                { version && <p className='inline-block opacity-60'>MyGPT v{version}</p> }
-				<StatusDot up={backendUp} label='Backend' />
-				<StatusDot up={ollamaUp} label='Ollama' />
-            </div>
-			<div className='text-sm text-white mx-8 my-auto cursor-pointer flex flex-row'>
-				{ props.frontendSettings.django_login ?
-					<div onClick={props.onDisclaimerClick}>Disclaimer</div>
-					: <></>
-				}
-				<div className='text-sm text-white mx-8 my-auto cursor-pointer' onClick={props.onFAQClick}>FAQs</div>
+
+			{/* Center: Version & Service Status Badges */}
+			<div className='flex flex-row items-center gap-3'>
+				{version && <span className='text-xs text-white/60 font-mono'>v{version}</span>}
+				<StatusPill up={backendUp} label='Backend' endpoint={backendEndpoint} />
+				<StatusPill up={ollamaUp} label='Ollama' endpoint={ollamaEndpoint} />
 			</div>
-		</div>
+
+			{/* Right: Actions / Links */}
+			<div className='text-xs text-white/80 flex flex-row items-center gap-4'>
+				{props.frontendSettings?.django_login ? (
+					<button
+						type='button'
+						onClick={props.onDisclaimerClick}
+						className='hover:text-white transition hover:underline cursor-pointer'
+					>
+						Disclaimer
+					</button>
+				) : null}
+				<button
+					type='button'
+					onClick={props.onFAQClick}
+					className='hover:text-white transition hover:underline cursor-pointer'
+				>
+					FAQs
+				</button>
+			</div>
+		</footer>
 	)
 }
 
