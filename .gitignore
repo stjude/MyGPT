@@ -49,3 +49,4 @@ backend/data/images/*
 electron/node_modules/*
 electron/release/*
 electron/dist/*
+electron/build/*

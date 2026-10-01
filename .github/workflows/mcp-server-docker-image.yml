@@ -14,7 +14,7 @@ on:
 
 jobs:
  build:
-  runs-on: linux_large
+  runs-on: mygpt_builder
   permissions:
    contents: read
    packages: write
