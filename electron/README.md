@@ -2,6 +2,23 @@
 
 This directory contains the cross-platform **Electron Desktop Application** for MyGPT, wrapping the React frontend and orchestrating the Dockerized Django backend and Ollama LLM service.
 
+## Download Desktop Apps
+
+The following installers are available in [GitHub Release v1.0.3](https://github.com/stjude/MyGPT/releases/tag/v1.0.3):
+
+| Platform | Architecture | Download |
+| --- | --- | --- |
+| macOS | Apple Silicon (arm64) | [MyGPT-1.0.3-arm64.dmg](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3-arm64.dmg) |
+| macOS | Intel (x64) | [MyGPT-1.0.3.dmg](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3.dmg) |
+| Windows | x64 installer | [MyGPT.Setup.1.0.3.exe](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT.Setup.1.0.3.exe) |
+| Windows | x64 portable | [MyGPT.1.0.3.exe](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT.1.0.3.exe) |
+| Linux | x64 AppImage | [MyGPT-1.0.3.AppImage](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3.AppImage) |
+| Debian / Ubuntu | amd64 package | [MyGPT-desktop_1.0.3_amd64.deb](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-desktop_1.0.3_amd64.deb) |
+
+Installed desktop apps do not require Node.js or a source checkout. For local services, install and start Docker Desktop and Ollama. For a remote backend, configure **Settings > Developer / API > Runtime services** instead; see the [remote desktop guide](./REMOTE_CLOUD_DESKTOP_GUIDE.md). macOS users should follow the [installation and Gatekeeper guide](./MACOS_INSTALL_GUIDE.md).
+
+The sections below cover development and packaging from source.
+
 ---
 
 ## 🚀 Quick Start
@@ -89,12 +106,7 @@ gh release upload v1.0.3 \
 
 Attach ZIPs or Windows/Linux installers only after building and testing them. Do not upload temporary files or unpacked app directories. Verify runtime endpoints and exclude development credentials before publishing.
 
-Once the assets are attached, the download links are:
-
-- [macOS Apple Silicon](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3-arm64.dmg)
-- [macOS Intel](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3.dmg)
-
-These links become available only after the release and assets are published.
+Published installers are listed in [Download Desktop Apps](#download-desktop-apps). Use the exact published asset URLs when updating download links; GitHub may replace spaces in uploaded filenames with dots.
 
 ### 📖 Distribution & User Guides:
 * **macOS Local User Guide:** [MACOS_INSTALL_GUIDE.md](./MACOS_INSTALL_GUIDE.md) — share this guide with Mac users for local installation, Ollama/Docker setup, and bypassing the macOS Gatekeeper prompt.

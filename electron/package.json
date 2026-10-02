@@ -3,7 +3,11 @@
   "version": "1.0.3",
   "description": "MyGPT - Privacy-First Retrieval-Augmented Generation Desktop Application",
   "main": "dist/main.js",
-  "author": "St. Jude Children's Research Hospital",
+  "homepage": "https://github.com/stjude/MyGPT",
+  "author": {
+    "name": "Jaimin Patel, St. Jude Children's Research Hospital",
+    "email": "jaimin.patel@stjude.org"
+  },
   "license": "Apache-2.0",
   "scripts": {
     "dev": "concurrently -k \"npm run dev:frontend\" \"wait-on http://localhost:3000 && npm run dev:electron\"",
