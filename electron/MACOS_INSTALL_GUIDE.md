@@ -42,7 +42,7 @@ Because MyGPT runs 100% locally on your machine with no external cloud API depen
 
 ## 💿 Installing MyGPT Desktop App
 
-1. Download the latest **`MyGPT-x.x.x-arm64.dmg`** (Apple Silicon M1/M2/M3/M4) or **`MyGPT-x.x.x-x64.dmg`** (Intel Macs) from the releases.
+1. Download **`MyGPT-1.0.3-arm64.dmg`** (Apple Silicon M1/M2/M3/M4) or **`MyGPT-1.0.3.dmg`** (Intel Macs) from [GitHub Releases](https://github.com/stjude/MyGPT/releases). Version 1.0.3 downloads become available after the release assets are published.
 2. Double-click the downloaded `.dmg` file to open the installer disk image.
 3. Drag the **MyGPT** app icon into your **Applications** folder.
 4. Eject the disk image.

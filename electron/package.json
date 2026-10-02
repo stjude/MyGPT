@@ -1,6 +1,6 @@
 {
   "name": "MyGPT-desktop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MyGPT - Privacy-First Retrieval-Augmented Generation Desktop Application",
   "main": "dist/main.js",
   "author": "St. Jude Children's Research Hospital",

@@ -66,8 +66,35 @@ npm run dist:linux   # Linux AppImage & Debian package (.deb)
 ```
 
 The output installers will be placed in `electron/release/`:
-* `MyGPT-1.0.2-arm64.dmg` (for Apple Silicon M1/M2/M3/M4)
-* `MyGPT-1.0.2-x64.dmg` (for Intel Macs)
+* `MyGPT-1.0.3-arm64.dmg` (for Apple Silicon M1/M2/M3/M4)
+* `MyGPT-1.0.3.dmg` (for Intel Macs)
+
+### Publishing Desktop Downloads
+
+Keep installers out of Git; `electron/release/` is ignored. Distribute them as assets on [GitHub Releases](https://github.com/stjude/MyGPT/releases).
+
+1. Commit the 1.0.3 source changes and push them before creating the release tag. Keep the existing `v1.0.2` release unchanged.
+2. Rebuild the macOS installers with `npm run dist:mac` from `electron/`. Do not rename old 1.0.2 installers: the packaged app must contain version 1.0.3.
+3. On GitHub, choose **Releases > Draft a new release**, create tag `v1.0.3` on the release commit, and title the release `MyGPT Desktop 1.0.3`.
+4. Drag the new DMGs into the release's **Attach binaries** area. Wait for uploads to finish, then publish. To attach files after publishing, open the release, choose **Edit**, upload the files, and save.
+
+Alternatively, after creating the release, upload from the repository root with GitHub CLI:
+
+```bash
+gh release upload v1.0.3 \
+   electron/release/MyGPT-1.0.3-arm64.dmg \
+   electron/release/MyGPT-1.0.3.dmg \
+   --repo stjude/MyGPT
+```
+
+Attach ZIPs or Windows/Linux installers only after building and testing them. Do not upload temporary files or unpacked app directories. Verify runtime endpoints and exclude development credentials before publishing.
+
+Once the assets are attached, the download links are:
+
+- [macOS Apple Silicon](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3-arm64.dmg)
+- [macOS Intel](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3.dmg)
+
+These links become available only after the release and assets are published.
 
 ### 📖 Distribution & User Guides:
 * **macOS Local User Guide:** [MACOS_INSTALL_GUIDE.md](./MACOS_INSTALL_GUIDE.md) — share this guide with Mac users for local installation, Ollama/Docker setup, and bypassing the macOS Gatekeeper prompt.

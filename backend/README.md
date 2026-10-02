@@ -49,7 +49,7 @@ To get a local copy up and running follow these simple example steps:
    Once you see following LOG in terminal, go to next step:
 
    ```sh
-	pubgpt-db-1  | LOG:  database system is ready to accept connections
+	mygpt-db-1  | LOG:  database system is ready to accept connections
    ```
 4. Open new terminal tab and start Django app container using following command:
 
@@ -59,8 +59,8 @@ To get a local copy up and running follow these simple example steps:
    It should take sometime to load the app as it's downloading LLM models and preparing the apps.
    Once you see following LOG in terminal, the app is ready!
    ```sh
-   pubgpt-backend-1  | Starting development server at http://0.0.0.0:8000/
-   pubgpt-backend-1  | Quit the server with CONTROL-C.
+   mygpt-backend-1  | Starting development server at http://0.0.0.0:8000/
+   mygpt-backend-1  | Quit the server with CONTROL-C.
    ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
