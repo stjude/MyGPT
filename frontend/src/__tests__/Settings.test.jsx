@@ -1,7 +1,9 @@
 import { vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import Settings from '../components/Settings'
+import { DeveloperAPISettings } from '../components/DeveloperAPISettings'
 import defaultSettings from '../utils/DefaultState'
+import { applyRuntimeConfig, getRuntimeConfig } from '../utils/runtimeConfig'
 
 vi.mock('../components/LLMSettings', () => ({
   default: () => <div data-testid='llm-settings'>LLM Settings</div>
@@ -102,5 +104,23 @@ describe('Settings', () => {
 
     expect(closeSettings).toHaveBeenCalledTimes(1)
     expect(openUpload).toHaveBeenCalledTimes(1)
+  })
+
+  it('links to HTTP(S) backend docs but never renders non-HTTP links', () => {
+    const original = getRuntimeConfig()
+    try {
+      applyRuntimeConfig({ ...original, backendUrl: 'https://example.org/backend' })
+      const { unmount } = render(<DeveloperAPISettings currentSettings={defaultSettings} settingsCallback={vi.fn()} />)
+      expect(screen.getByRole('link', { name: /Swagger UI/i })).toHaveAttribute('href', 'https://example.org/backend/api/docs/')
+      expect(screen.getByRole('link', { name: /OpenAPI JSON/i })).toHaveAttribute('href', 'https://example.org/backend/api/schema/')
+      unmount()
+
+      applyRuntimeConfig({ ...original, backendUrl: 'javascript:alert(1)' })
+      render(<DeveloperAPISettings currentSettings={defaultSettings} settingsCallback={vi.fn()} />)
+      expect(screen.queryByRole('link', { name: /Swagger UI/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /OpenAPI JSON/i })).not.toBeInTheDocument()
+    } finally {
+      applyRuntimeConfig(original)
+    }
   })
 })

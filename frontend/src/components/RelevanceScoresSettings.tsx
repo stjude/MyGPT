@@ -32,7 +32,7 @@ export const RelevanceScoreSettings = (props: any) => {
 						: import.meta.env.VITE_AUTH_TOKEN_DEV}`
 			}
 		}
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/get_embedding_model_details/?dataset=${props.selectedDataset}&format=json`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_embedding_model_details/?dataset=${props.selectedDataset}&format=json`, requestOptions)
 			.then(response => response.json())
 			.then(data => {
 				if (data) {

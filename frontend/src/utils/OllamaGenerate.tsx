@@ -20,7 +20,7 @@ export const  OllamaDirectGenerateStream = async (
 	let content = ''
 	let thought = ''
 	let answerReceived = false
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/ollama_generate/`, {body, method: 'POST'})
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_generate/`, {body, method: 'POST'})
 	const reader:any = response.body?.getReader()
 	const decoder = new TextDecoder()
 	let leftover = ''
@@ -102,7 +102,7 @@ export const OllamaDirectGenerateNoStream = async (
 	let content = ''
 	// let thought = ''
 	let answerReceived = false
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/ollama_generate/`, {body, method: 'POST'})
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_generate/`, {body, method: 'POST'})
 	const data = await response.json()
 	if (data.response) {
 		content = data.response

@@ -256,7 +256,7 @@ def get_context(request):
         relevance_score_min = -5.5
         relevance_score_max = 3.03
 
-        # check if dataset exists or crate a new one
+        # check if dataset exists or create a new one
         dataset_exist = Dataset.objects.filter(dataset_name=dataset_name).exists()
         if not dataset_exist:
             Dataset.objects.create(
@@ -265,15 +265,16 @@ def get_context(request):
                 dataset_size=0,
                 dataset_date_time=make_aware(datetime.datetime.now()),
                 user_email='-',
-                coefficient_a_Qsem = weight_a_default,
-                coefficient_b_Qkey = weight_b_default,
-                coefficient_c_Qrank = weight_c_default,
+                embedding_model=json_request.get('selected_embedding_model', 'nomic-embed-text:latest'),
+                coefficient_a_Qsem=weight_a_default,
+                coefficient_b_Qkey=weight_b_default,
+                coefficient_c_Qrank=weight_c_default,
             )
         dataset = Dataset.objects.get(dataset_name=dataset_name)
-        embedding_model = dataset.embedding_model
-        new_conversation = json_request['new_conversation']
-        previous_question = json_request['previous_query']
-        no_context = json_request['no_context']
+        embedding_model = dataset.embedding_model if dataset.embedding_model else json_request.get('selected_embedding_model', 'nomic-embed-text:latest')
+        new_conversation = json_request.get('new_conversation', True)
+        previous_question = json_request.get('previous_query', '')
+        no_context = json_request.get('no_context', False)
         use_bm25 = dataset.use_bm25 if hasattr(dataset, 'use_bm25') else False
         reranker = dataset.reranker if hasattr(dataset, 'reranker') else 'None'
         use_reranker = False if reranker == 'None' else True
@@ -281,8 +282,8 @@ def get_context(request):
         weight_b = dataset.coefficient_b_Qkey if hasattr(dataset, 'coefficient_b_Qkey') else weight_b_default
         weight_c = dataset.coefficient_c_Qrank if hasattr(dataset, 'coefficient_c_Qrank') else weight_c_default
         language_of_docs = dataset.documents_language if hasattr(dataset, 'documents_language') else 'english'
-        keywords = json_request['keywords'] if 'keywords' in json_request else ''
-        translated_text = json_request['translated_text'] if language_of_docs != 'english' and 'translated_text' in json_request else ''
+        keywords = json_request.get('keywords', '')
+        translated_text = json_request.get('translated_text', '') if language_of_docs != 'english' else ''
 
         if no_context:    
             titles, pages, starts, stops, chunks_txt, distances, reranked_scores = [], [], [], [], [], [], []

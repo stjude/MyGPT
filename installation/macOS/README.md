@@ -91,7 +91,7 @@ You have 2 options to install MyGPT pipeline:
 
 	If you have zip file with MyGPT installation instructions, you can unzip it and copy it on your desktop or your desired location. You can skip remaining instructions from below and go to Step 2.
 
-	Or you can get installation instructions by running following command from Terminal. It will create `MyGPT` folder on your Desktop or desired folder. To get this from GitHub, we will need `GitHub username` and `GitHub access token` as the GitHub repo is private. When you run the following command, it will ask for this credentials.
+	Or you can get installation instructions by running following command from Terminal. It will create `MyGPT` folder on your Desktop or desired folder.
 
 	```
 	git clone https://github.com/stjude/MyGPT.git

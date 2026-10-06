@@ -30,7 +30,7 @@ const Disclaimer = (props: DisclaimerProps) =>{
 		}
 
 
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/get_username/?format=json`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_username/?format=json`, requestOptions)
 			.then(response => {
 			if (response.status === 401) {
 				localStorage.removeItem('access')
@@ -52,7 +52,7 @@ const Disclaimer = (props: DisclaimerProps) =>{
 
 	useEffect(()=>{
 		if (djangoAuthenticated && djangoUser && djangoUser.user && djangoUser.user.length > 0) {
-			fetch(`${import.meta.env.VITE_BACKEND_API}api/disclaimer_agreements/?format=json`, {
+			fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/disclaimer_agreements/?format=json`, {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ const Disclaimer = (props: DisclaimerProps) =>{
 			})
 		}
 
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/submit_disclaimer_agreement/?format=json`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/submit_disclaimer_agreement/?format=json`, requestOptions)
 			.then(response => response.json())
 			.then(data => {
 				console.log('Success:', data)
