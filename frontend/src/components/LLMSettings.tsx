@@ -31,7 +31,7 @@ const LLMSettings = (props: {
 
 			// fetch using async await
 			const postData = async () => {
-				const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/ollama_pull_model/`, {body, method: 'POST'})
+				const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_pull_model/`, {body, method: 'POST'})
 				const reader:any = response.body?.getReader()
 				if (!reader) {
 					setMessage('No streaming response from server')
@@ -115,7 +115,7 @@ const LLMSettings = (props: {
 			// check if the api is available
 			const check = async () => {
 				try {
-					const r = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_ollama_models/`, { method: 'POST' })
+					const r = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, { method: 'POST' })
 					const data = await r.json()
 					const hasModelList = Array.isArray(data?.models)
 					if (!hasModelList) {
@@ -148,7 +148,7 @@ const LLMSettings = (props: {
 		if(message === 'success' && llmToLoad !== '' && currentSettings.selectedLlm !== ''){
 			// const model = currentSettings.selectedLlm.toLowerCase()
 			const postData = async () => {
-				const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_ollama_models/`, {method: 'POST'})
+				const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {method: 'POST'})
 				const data = await response.json()
 				// const llm = data.models.filter((model:any) => model.name.split(':')[0] === currentSettings.selectedLlm.toLowerCase())[0]
 				const llm = data.models.filter((model:any) => model.name === currentSettings.selectedLlm.toLowerCase())[0]
@@ -174,7 +174,7 @@ const LLMSettings = (props: {
 						}]})
 				}
 				let llm_endpoint = 'add_ollama_models'
-				fetch(`${import.meta.env.VITE_BACKEND_API}api/${llm_endpoint}/?format=json`, requestOptions)
+				fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/${llm_endpoint}/?format=json`, requestOptions)
 					.then(response => response.json())
 					.then((data:any) => {
 						props.settingsCallback({...currentSettings, llms:llm.name})

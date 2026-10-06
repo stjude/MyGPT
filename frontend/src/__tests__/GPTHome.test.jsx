@@ -95,4 +95,51 @@ describe('GPTHome', () => {
     renderGPTHome({ loggedin: false })
     expect(screen.getByText(/Login to view document library/i)).toBeInTheDocument()
   })
+
+  it('loads desktop models through Electron instead of fetching Ollama from the renderer', async () => {
+    const { fetchAndRegisterOllamaModels } = await vi.importActual('../utils/GPTHomeAPI')
+    const electronAPI = window.electronAPI
+    const fetch = globalThis.fetch
+    window.electronAPI = {
+      isDesktop: true,
+      getOllamaStatus: vi.fn().mockResolvedValue({
+        isRunning: true,
+        models: [
+          { name: 'llama3:latest', size: 1000, details: { family: 'llama', quantization_level: 'Q4_K_M' } },
+          { name: 'embedding:latest', size: 1000, details: { family: 'bert', quantization_level: 'F16' } },
+        ],
+      }),
+    }
+    globalThis.fetch = vi.fn()
+
+    try {
+      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['llama3:latest'])
+      expect(window.electronAPI.getOllamaStatus).toHaveBeenCalledOnce()
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    } finally {
+      window.electronAPI = electronAPI
+      globalThis.fetch = fetch
+    }
+  })
+
+  it('keeps discovered desktop models when backend registration fails', async () => {
+    const { fetchAndRegisterOllamaModels } = await vi.importActual('../utils/GPTHomeAPI')
+    const electronAPI = window.electronAPI
+    const fetch = globalThis.fetch
+    window.electronAPI = {
+      isDesktop: true,
+      getOllamaStatus: vi.fn().mockResolvedValue({
+        isRunning: true,
+        models: [{ name: 'llama3:latest', size: 1000, details: { family: 'llama', quantization_level: 'Q4_K_M' } }],
+      }),
+    }
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Backend unavailable'))
+
+    try {
+      expect(await fetchAndRegisterOllamaModels({ django_login: false })).toEqual(['llama3:latest'])
+    } finally {
+      window.electronAPI = electronAPI
+      globalThis.fetch = fetch
+    }
+  })
 })

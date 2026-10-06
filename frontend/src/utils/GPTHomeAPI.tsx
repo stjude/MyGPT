@@ -18,18 +18,22 @@ export const fetchAndRegisterOllamaModels = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<string[]> => {
+	let llms: string[] = []
 	try {
-		const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_ollama_models/`, {
-			method: 'POST',
-			signal,
-		})
-		if (!response.ok) {
-			return []
+		let data: { models: any[] }
+		if (window.electronAPI?.isDesktop) {
+			data = await window.electronAPI.getOllamaStatus()
+		} else {
+			const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, {
+				method: 'GET',
+				signal,
+			})
+			if (!response.ok) return []
+			data = await response.json()
 		}
-		const data = await response.json()
 
-		const llms: string[] = data.models
-			.filter((model: any) => model.quantization_level !== 'F16')
+		llms = data.models
+			.filter((model: any) => (model.details?.quantization_level ?? model.quantization_level) !== 'F16')
 			.map((model: any) => model.name)
 
 		const llms_object = data.models.map((model: any) => ({
@@ -47,18 +51,18 @@ export const fetchAndRegisterOllamaModels = async (
 				body: JSON.stringify({ llms: llms_object }),
 				signal,
 			}
-			const response2 = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_ollama_models/`, registerOptions)
+			const response2 = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_ollama_models/`, registerOptions)
 			if (response2.ok) {
 				const data2 = await response2.json()
 				console.log(data2)
 			}
 		}
 
-		const embeddingModels = data.models.filter(
-			(model: any) =>
-				(model.quantization_level === 'F16' && model.family.includes('bert')) ||
-				model.family.includes('nomic-bert')
-		)
+		const embeddingModels = data.models.filter((model: any) => {
+			const family = model.details?.family ?? model.family ?? ''
+			const quantization = model.details?.quantization_level ?? model.quantization_level
+			return (quantization === 'F16' && family.includes('bert')) || family.includes('nomic-bert')
+		})
 		const embedding_models_object = embeddingModels.map((model: any) => ({
 			name: model.name,
 			size: (model.size * 1e-9).toFixed(2),
@@ -73,7 +77,7 @@ export const fetchAndRegisterOllamaModels = async (
 				body: JSON.stringify({ embedding_models: embedding_models_object }),
 				signal,
 			}
-			const response3 = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_embedding_models/`, embeddingOptions)
+			const response3 = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_embedding_models/`, embeddingOptions)
 			if (response3.ok) {
 				const data3 = await response3.json()
 				console.log(data3)
@@ -83,9 +87,9 @@ export const fetchAndRegisterOllamaModels = async (
 		return llms
 	} catch (err: any) {
 		if (err?.name !== 'AbortError') {
-			console.warn('fetchAndRegisterOllamaModels: backend unreachable', err)
+			console.warn('fetchAndRegisterOllamaModels: model fetch or registration failed', err)
 		}
-		return []
+		return llms
 	}
 }
 
@@ -96,7 +100,7 @@ export const fetchDatasetDetails = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_dataset_details/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_dataset_details/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -119,7 +123,7 @@ export const fetchDocuments = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_documents/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_documents/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -141,7 +145,7 @@ export const fetchSections = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_sections/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_sections/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -163,7 +167,7 @@ export const addDemoLibraryRequest = async (
 		format: 'json',
 		embedding_model: sentenceTransformer,
 	})
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/add_demo_library/?${params.toString()}`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/add_demo_library/?${params.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Authorization': getAuthHeader(frontendSettings),
@@ -179,7 +183,7 @@ export const fetchContext = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/get_context/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_context/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -198,7 +202,7 @@ export const saveAnswer = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<any> => {
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/save_answer/?format=json`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/save_answer/?format=json`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -223,7 +227,7 @@ export const fetchProtectedMediaBlobUrl = async (
 		requestHeaders['Authorization'] = authHeader
 	}
 
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}media/${mediaPath}`, {
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}media/${mediaPath}`, {
 		method: 'GET',
 		headers: requestHeaders,
 		signal,

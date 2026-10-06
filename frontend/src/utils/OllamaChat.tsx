@@ -2,7 +2,7 @@ export const  OllamaDirectChatStream = async (body:any, setAnswer:any, setThough
 	let content = ''
 	let thought = ''
 	let answerReceived = false
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/ollama_chat/`, {body, method: 'POST'})
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_chat/`, {body, method: 'POST'})
 	const reader:any = response.body?.getReader()
 	const decoder = new TextDecoder()
 	let leftover = ''
@@ -79,7 +79,7 @@ const OllamaDirectChatNoStream = async (body:any, setAnswer:any, setThought:any)
 	let content = ''
 	let thought = ''
 	let answerReceived = false
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/ollama_chat/`, {body, method: 'POST'})
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_chat/`, {body, method: 'POST'})
 	const data = await response.json()
 	if (data.content) {
 		content = data.content
@@ -97,7 +97,7 @@ export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, M
 	let answerReceived
 	let content = ''
 	let toolResponse = ''
-	const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/ollama_chat/`, {body, method: 'POST'})
+	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_chat/`, {body, method: 'POST'})
 	const data = await response.json()
 
 	const toolCalls = Array.isArray(data.tool_calls)

@@ -13,6 +13,7 @@ import Footer from './components/Footer'
 import { PublicClientApplication } from '@azure/msal-browser'
 import { MsalProvider } from '@azure/msal-react'
 import { msalConfig } from './utils/authConfigEnv'
+import { RUNTIME_CONFIG_CHANGED_EVENT } from './utils/runtimeConfig'
 
 const msalInstance = new PublicClientApplication(msalConfig)
 
@@ -38,6 +39,7 @@ function App() {
   const [user, setUser] = useState<any>(null)
   const [darkMode, setDarkMode] = useState(false)
   const [showFAQ, setShowFAQ] = useState(currentSettings.showFAQ || defaultSettings.showFAQ)
+  const [runtimeRevision, setRuntimeRevision] = useState(0)
 
   const settingsCallback = (newSettings:any) => {
     newSettings.restriction_without_login = frontendSettings.restriction_without_login
@@ -57,6 +59,25 @@ function App() {
     setCurrentSettings({...currentSettings, darkMode:!darkMode})
   }
 
+  useEffect(() => {
+    const handleRuntimeConfigChanged = () => {
+      setRuntimeRevision(revision => revision + 1)
+      setFrontendSettings(default_frontend_settings)
+      setCurrentSettings(settings => ({
+        ...settings,
+        datasets: ['None'],
+        selectedDataset: 'None',
+        fetchDatasets: true,
+        datasetsUpdated: true,
+        fetchPapers: true,
+        llms: [],
+        runtimeRevision: (settings.runtimeRevision || 0) + 1,
+      }))
+    }
+    window.addEventListener(RUNTIME_CONFIG_CHANGED_EVENT, handleRuntimeConfigChanged)
+    return () => window.removeEventListener(RUNTIME_CONFIG_CHANGED_EVENT, handleRuntimeConfigChanged)
+  }, [])
+
   useEffect(()=>{
 		const requestOptions = {
 			method: 'GET',
@@ -64,7 +85,7 @@ function App() {
 				'Content-Type': 'application/json'
 			}
 		}
-		fetch(`${import.meta.env.VITE_BACKEND_API}api/frontend_settings/?format=json`, requestOptions)
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/frontend_settings/?format=json`, requestOptions)
 			.then(response => response.json())
 			.then(data => {
 				setFrontendSettings(data.settings)
@@ -74,7 +95,7 @@ function App() {
 			.catch(err => {
 				console.warn('frontend_settings: backend unreachable', err)
 			})
-	},[])
+	},[runtimeRevision])
 
   //  set currentsettings login to true
   useEffect(()=>{
@@ -102,11 +123,17 @@ function App() {
             'user_group': user.otherRoles?.length ? user.otherRoles[0] : ''
           })
         }
-        fetch(`${import.meta.env.VITE_BACKEND_API}api/get_datasets/?format=json`, requestOptions)
+        fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_datasets/?format=json`, requestOptions)
           .then(response => response.json())
           .then(data => {
-            currentSettings.datasets = currentSettings.datasets.filter((d:any)=>d !== 'None')
-            setCurrentSettings({...currentSettings, datasets:data.map((d:any)=>d.dataset_name), selectedDataset:data[0].dataset_name, fetchDatasets:false})
+            const datasets = data.map((d:any) => d.dataset_name)
+            setCurrentSettings({
+              ...currentSettings,
+              datasets: datasets.length ? datasets : ['None'],
+              selectedDataset: datasets[0] || 'None',
+              fetchDatasets: false,
+              datasetsUpdated: false,
+            })
           })
           .catch(err => {
             console.warn('get_datasets: backend unreachable', err)
@@ -130,16 +157,23 @@ function App() {
             })
           }
           if ((frontendSettings.django_login && localStorage.getItem('access')?.length) || !frontendSettings.django_login) {
-            fetch(`${import.meta.env.VITE_BACKEND_API}api/get_datasets/?format=json`, requestOptions)
+            fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_datasets/?format=json`, requestOptions)
             .then(response => {
               if(response.ok){
                 return response.json()
               }
             })
               .then(data => {
-                currentSettings.datasets = currentSettings.datasets.filter((d:any)=>d !== 'None')
-                if(data && data.length > 0)
-                  setCurrentSettings({...currentSettings, datasets:data.map((d:any)=>d.dataset_name), selectedDataset:data[0].dataset_name, fetchDatasets:false, datasetsUpdated:false})
+                if (data) {
+                  const datasets = data.map((d:any) => d.dataset_name)
+                  setCurrentSettings({
+                    ...currentSettings,
+                    datasets: datasets.length ? datasets : ['None'],
+                    selectedDataset: datasets[0] || 'None',
+                    fetchDatasets: false,
+                    datasetsUpdated: false,
+                  })
+                }
             })
             .catch(err => {
               console.warn('get_datasets: backend unreachable', err)
@@ -149,10 +183,10 @@ function App() {
     }, [user, currentSettings, frontendSettings.django_login])
 
   return (
-    <div className={darkMode ? 'dark': ''}>
+    <div className={`h-screen max-h-screen w-full overflow-hidden flex flex-col justify-between bg-gray-200 dark:bg-neutral-900 ${darkMode ? 'dark': ''}`}>
     { frontendSettings.azure_login ?
       <MsalProvider instance={msalInstance}>
-        <div className='bg-gray-200 dark:bg-zinc-800'>
+        <div className='flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-200 dark:bg-neutral-800'>
         <TopNav
           setShowUpload={setShowUpload}
           setShowSettings={setShowSettings} 
@@ -218,7 +252,7 @@ function App() {
       </MsalProvider>
     : 
     frontendSettings.django_login ?
-    <div className='bg-gray-200'>
+    <div className='flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-200 dark:bg-neutral-800'>
       <TopNav 
         setShowUpload={()=>{
           setShowUpload(true)
@@ -301,7 +335,7 @@ function App() {
       }
     </div>
     :
-    <div className='bg-gray-200'>
+    <div className='flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-200 dark:bg-neutral-800'>
       <TopNav 
         setShowUpload={setShowUpload}
         setShowSettings={setShowSettings} 
