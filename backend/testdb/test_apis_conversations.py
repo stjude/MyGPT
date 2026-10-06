@@ -62,7 +62,10 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.json()['context'], '')
 		self.assertEqual(response.json()['sources'], [])
-		self.assertTrue(Question.objects.filter(question_text='What is MyGPT?').exists())
+		self.assertTrue(Question.objects.filter(
+			question_text='What is MyGPT?',
+			question_dataset__dataset_name='llama3:latest_direct_chat',
+		).exists())
 		self.assertTrue(Dataset.objects.filter(dataset_name='llama3:latest_direct_chat').exists())
 
 	@patch('testdb.views.apis.predict_hallucination_index', return_value=0)
