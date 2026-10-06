@@ -1,121 +1,72 @@
-# Django Backend
+# MyGPT Backend
 
-### Built With
+The backend is a Django and Django REST Framework application. It serves the MyGPT API, stores datasets and conversation records in PostgreSQL, and connects to Ollama and the vector database for retrieval and model operations.
 
-* [Docker](https://www.docker.com/)
-* [Django](https://www.djangoproject.com/)
+## Requirements
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+- Docker Desktop with Docker Compose
+- A repository-root `.env_backend` file, created from `.env_backend.example`
+- A repository-root `.env_frontend` file for the full application Compose setup
+- Ollama running on the host if you need model-backed endpoints; the Compose backend defaults to `http://host.docker.internal:11434`
 
-<!-- GETTING STARTED -->
-## Getting Started
+Create the ignored environment files from the repository root if they do not already exist:
 
-To get a local copy up and running follow these simple example steps:
-
-### Prerequisites
-
-* Docker Installation - Download apporpirate Docker installtion file for your OS: https://docs.docker.com/get-docker/
-
-### Installation and setup
-
-1. Once docker is installed, clone the repo on you local folder:
-
-   ```sh
-   git clone https://github.com/stjude-biohackathon/KIDS23-Team11.git
-   ```
-2. Copy LLM model into `backend/models/` folder. The folder structure can be similar to the following:
-
-   ```sh
-   backend/models/biogpt_finetuned/
-   	config.json
-   	merges.txt
-   	pytorch_model.bin
-   	special_tokens_map.json
-   	tokenizer_config.json
-   	training_args.bin
-   	vocab.json
-   ```
-2. Go to the repo root and run this docker commands to build image (will take few minute for first time, should be faster on sunsequent run): 
-
-   ```sh
-   docker compose build
-   ```
-
-3. Start database container first using following command:
-
-   ```sh
-   docker compose up db
-   ```
-   Once you see following LOG in terminal, go to next step:
-
-   ```sh
-	mygpt-db-1  | LOG:  database system is ready to accept connections
-   ```
-4. Open new terminal tab and start Django app container using following command:
-
-   ```sh 
-   docker compose up backend
-   ```
-   It should take sometime to load the app as it's downloading LLM models and preparing the apps.
-   Once you see following LOG in terminal, the app is ready!
-   ```sh
-   mygpt-backend-1  | Starting development server at http://0.0.0.0:8000/
-   mygpt-backend-1  | Quit the server with CONTROL-C.
-   ```
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-To test the app, go to the homepage: http://localhost:8000/
-When app is launched for the first time, it will load sample database from GPCRdb Protein family query and sample CSV file from `/raw_data/` folder.
-Explore REST api queires at following page: http://localhost:8000/api/
-
-To query the LLM models, use the following API endpoint:
-http://localhost:8000/api/biogpt_finetuned/ OR
-http://localhost:8000/api/biogpt_original/
-
-The API endpoint accepts data as POST query, and the content of payload should be like this:
-```json
-{
-	"text": "What is the function of BRAF gene?",
-}
-
-``` 
-
-To post new data, go to database use the following API endpoint:
-http://localhost:8000/api/post_question_answer/
-
-The JSON object for post must following this format:
-```json
-{
-	"text": "What is the meaning of life?",
-	"type": "general",
-	"answers": [
-		{
-			"type": "ChatGPT",
-			"text": "Menaing of life is to be happy.",
-			"score": "positive"
-		},
-		{
-			"type": "BioGPT",
-			"text": "Meaning of life is to achieve your goals.",
-			"score": "neutral"
-		},
-		{
-			"type": "AI21",
-			"text": "Meaning of life is to not die.",
-			"score": "negative"
-		},
-		{
-			"type": "OpenAssistant",
-			"text": "Meaning of life is to be always learning.",
-			"score": "positive"
-		}
-	]
-}
+```bash
+cp .env_backend.example .env_backend
+cp .env_frontend.example .env_frontend
 ```
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+Set secure database and Django values in `.env_backend`. Do not commit either environment file, and do not put secrets in `.env_frontend`; `VITE_` values are exposed to browser clients.
+
+## Run Locally
+
+From the repository root, build and start the database and backend:
+
+```bash
+docker compose build backend
+docker compose up -d db backend
+```
+
+The backend waits for the database health check, applies migrations, collects static files, and starts Django on port `8000` by default. View logs with:
+
+```bash
+docker compose logs -f backend
+```
+
+Stop the services with `docker compose down`. This leaves the database volume intact.
+
+## API Overview
+
+With the backend running, browse the API root and generated documentation:
+
+- API root: [http://localhost:8000/api/](http://localhost:8000/api/)
+- Swagger UI: [http://localhost:8000/api/docs/](http://localhost:8000/api/docs/)
+- OpenAPI schema: [http://localhost:8000/api/schema/](http://localhost:8000/api/schema/)
+
+The API includes dataset and document management, conversations and answers, model and embedding configuration, secure media, authentication, and Ollama generation/chat/model-management endpoints. Many endpoints expect JSON POST bodies; consult the OpenAPI schema for request and response fields.
+
+## Tests
+
+The backend tests live in `testdb/test_apis_data.py`, `testdb/test_apis_conversations.py`, and `testdb/test_apis_integrations.py`. They use Django `TestCase` and mock external services such as Ollama, YouTube, and embedding utilities.
+
+Run all backend tests from the repository root while the Compose backend and database are running:
+
+```bash
+docker compose exec backend python3 manage.py test testdb
+```
+
+The same tests can be run with pytest:
+
+```bash
+docker compose exec backend python3 -m pytest testdb
+```
+
+Run one test module or class when iterating:
+
+```bash
+docker compose exec backend python3 manage.py test testdb.test_apis_data
+docker compose exec backend python3 manage.py test testdb.test_apis_conversations.ConversationAndAnswerAPITests
+docker compose exec backend python3 -m pytest testdb/test_apis_integrations.py -q
+```
+
+Both runners create a separate test database and leave the development database untouched. Django may emit timezone warnings while applying legacy migrations; these warnings do not indicate test failures.
