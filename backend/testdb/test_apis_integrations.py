@@ -10,11 +10,13 @@ from testdb.models import Dataset, FrontEndSettings, Model
 
 
 class APIValidationAndAccessTests(TestCase):
-	def test_zotero_endpoint_rejects_invalid_api_key_before_external_calls(self):
+	@patch('testdb.views.apis.get_zotero_chunks')
+	def test_zotero_endpoint_rejects_invalid_api_key_before_external_calls(self, get_zotero_chunks):
 		response = APIClient().post(reverse('add_zotero_collection'), {'api_key': '<invalid>'})
 
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.json()['error_message'], 'Invalid API key')
+		get_zotero_chunks.assert_not_called()
 
 	@patch('testdb.views.apis.add_dataset_from_upload', return_value='Uploaded Library')
 	def test_upload_rejects_invalid_embedding_model(self, add_dataset_from_upload):
