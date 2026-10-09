@@ -25,6 +25,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          # Uses the runner's own engine so no moby/buildkit image is pulled from Docker Hub.
+          driver: docker
 
       - name: Build and push amd64
         uses: docker/build-push-action@v5
