@@ -1,6 +1,7 @@
 import { ChildProcess, spawn, execSync } from 'child_process'
 import * as path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
 import * as http from 'http'
 import * as https from 'https'
 import { randomBytes } from 'crypto'
@@ -13,6 +14,7 @@ export class ProcessManager {
   private apiBaseUrl: string
   private ollamaUrl: string = 'http://127.0.0.1:11434'
   private projectRoot: string
+  private lastStartError: string | null = null
 
   constructor(host: string = '127.0.0.1', port: number = 8000) {
     this.apiBaseUrl = `http://${host}:${port}`
@@ -73,6 +75,41 @@ export class ProcessManager {
       (endpoint.pathname === '/' || endpoint.pathname === '')
   }
 
+  public getLastStartError(): string | null {
+    return this.lastStartError
+  }
+
+  private getDockerEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+    const env: NodeJS.ProcessEnv = { ...process.env, ...extra }
+    if (process.platform === 'darwin') {
+      // Apps launched from Finder get a minimal PATH that omits Docker Desktop's CLI locations.
+      const dockerDirs = [
+        '/usr/local/bin',
+        '/opt/homebrew/bin',
+        '/Applications/Docker.app/Contents/Resources/bin',
+        path.join(os.homedir(), '.docker', 'bin'),
+      ]
+      env.PATH = [env.PATH, ...dockerDirs].filter(Boolean).join(path.delimiter)
+    }
+    return env
+  }
+
+  /** Returns a user-facing problem description, or null when Docker is installed and running. */
+  private checkDocker(): string | null {
+    const env = this.getDockerEnv()
+    try {
+      execSync('docker --version', { stdio: 'ignore', env })
+    } catch {
+      return 'Docker was not found. Install Docker Desktop, start it, and then restart MyGPT.'
+    }
+    try {
+      execSync('docker info', { stdio: 'ignore', env, timeout: 15000 })
+    } catch {
+      return 'Docker Desktop is not running. Start Docker Desktop, wait until it is ready, and then start the MyGPT services.'
+    }
+    return null
+  }
+
   /**
    * Checks whether the backend server is already reachable
    */
@@ -100,29 +137,53 @@ export class ProcessManager {
     const composeFile = path.join(this.projectRoot, 'docker-compose.yml')
     if (!fs.existsSync(composeFile)) {
       console.log('[ProcessManager] docker-compose.yml not found at:', composeFile)
+      this.lastStartError = 'The bundled Docker Compose file is missing. Reinstall MyGPT.'
       return false
     }
 
     console.log('[ProcessManager] Attempting to start backend containers via Docker Compose...')
-    try {
-      // Check if docker is available
-      execSync('docker --version', { stdio: 'ignore' })
-    } catch {
-      console.warn('[ProcessManager] Docker CLI not found on system.')
+    const dockerProblem = this.checkDocker()
+    if (dockerProblem) {
+      console.warn(`[ProcessManager] ${dockerProblem}`)
+      this.lastStartError = dockerProblem
       return false
     }
 
     return new Promise((resolve) => {
-      const composeArgs = ['compose', 'up', '-d']
-      if (forceRecreate) composeArgs.push('--force-recreate')
-      composeArgs.push('db', 'backend', 'grobid')
+      const upArgs = ['up', '-d']
+      if (forceRecreate) upArgs.push('--force-recreate')
+      upArgs.push('db', 'backend', 'grobid')
       const backendEndpoint = new URL(this.apiBaseUrl)
-      const dockerEnv = {
-        ...process.env,
+      const dockerEnv = this.getDockerEnv({
         BACKEND_PORT: backendEndpoint.port || '8000',
         OLLAMA_SERVER: this.getDockerOllamaUrl(),
+      })
+
+      let settled = false
+      const finish = (ok: boolean) => {
+        if (settled) return
+        settled = true
+        this.spawnedDocker = ok
+        this.lastStartError = ok
+          ? null
+          : 'Docker could not start the MyGPT services. Check that you are online (the first start downloads several GB of images) and that Docker Desktop has enough disk space.'
+        resolve(ok)
       }
-      const dockerProc = spawn('docker', composeArgs, {
+
+      let legacyStarted = false
+      const runLegacyCompose = () => {
+        if (legacyStarted) return
+        legacyStarted = true
+        const legacyProc = spawn('docker-compose', upArgs, {
+          cwd: this.projectRoot,
+          stdio: 'inherit',
+          env: dockerEnv,
+        })
+        legacyProc.on('error', () => finish(false))
+        legacyProc.on('close', (code) => finish(code === 0))
+      }
+
+      const dockerProc = spawn('docker', ['compose', ...upArgs], {
         cwd: this.projectRoot,
         stdio: 'inherit',
         env: dockerEnv,
@@ -130,38 +191,17 @@ export class ProcessManager {
 
       dockerProc.on('error', (err) => {
         console.warn('[ProcessManager] docker compose failed:', err.message)
-        // Try fallback to legacy docker-compose
-        const legacyArgs = ['up', '-d']
-        if (forceRecreate) legacyArgs.push('--force-recreate')
-        legacyArgs.push('db', 'backend', 'grobid')
-        const legacyProc = spawn('docker-compose', legacyArgs, {
-          cwd: this.projectRoot,
-          stdio: 'inherit',
-          env: dockerEnv,
-        })
-        legacyProc.on('close', (code) => {
-          this.spawnedDocker = code === 0
-          resolve(code === 0)
-        })
+        runLegacyCompose()
       })
 
       dockerProc.on('close', (code) => {
         if (code === 0) {
-          this.spawnedDocker = true
           console.log('[ProcessManager] Docker backend containers started successfully.')
-          resolve(true)
+          finish(true)
           return
         }
-
         console.warn(`[ProcessManager] docker compose exited with code ${code}. Trying legacy docker-compose...`)
-        const legacyProc = spawn('docker-compose', ['up', '-d', 'db', 'backend', 'grobid'], {
-          cwd: this.projectRoot,
-          stdio: 'inherit',
-        })
-        legacyProc.on('close', (legacyCode) => {
-          this.spawnedDocker = legacyCode === 0
-          resolve(legacyCode === 0)
-        })
+        runLegacyCompose()
       })
     })
   }
@@ -169,19 +209,21 @@ export class ProcessManager {
   /**
    * Starts the Django backend process (via Docker or local fallback)
    */
-  public async startBackend(): Promise<void> {
+  public async startBackend(): Promise<boolean> {
     const alreadyRunning = await this.isBackendRunning()
     if (alreadyRunning) {
       console.log(`[ProcessManager] Backend server is already running and healthy on ${this.getApiBaseUrl()}`)
-      return
+      this.lastStartError = null
+      return true
     }
 
     // 1. Primary Strategy: Docker Compose
     console.log('[ProcessManager] Backend is not active. Trying Docker backend...')
     const startedDocker = await this.startDockerBackend()
     if (startedDocker) {
-      const ready = await this.waitForBackendReady(45000)
-      if (ready) return
+      const ready = await this.waitForBackendReady(120000)
+      if (ready) return true
+      this.lastStartError = 'The MyGPT containers started, but the backend did not respond in time. It may still be initializing; check the footer status in a minute.'
     }
 
     // 2. Fallback Strategy: Standalone packaged binary (if present)
@@ -205,9 +247,13 @@ export class ProcessManager {
           },
           stdio: ['ignore', 'pipe', 'pipe'],
         })
-        await this.waitForBackendReady(30000)
+        if (await this.waitForBackendReady(30000)) {
+          this.lastStartError = null
+          return true
+        }
       }
     }
+    return false
   }
 
   private getDockerOllamaUrl(): string {

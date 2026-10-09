@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ProcessManager } from './process-manager'
@@ -49,7 +49,24 @@ function getAppIcon(): string | undefined {
   return undefined
 }
 
-async function createWindow() {
+const STARTUP_SCREEN_HTML = `<!doctype html>
+<html><head><meta charset="utf-8"><title>MyGPT Desktop</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<style>
+  html,body{height:100%;margin:0}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1e293b;text-align:center}
+  h1{font-size:22px;font-weight:600;margin:0}
+  p{font-size:14px;margin:0;max-width:420px;line-height:1.5;color:#64748b}
+  .spinner{width:36px;height:36px;border:4px solid #cbd5e1;border-top-color:#2a4759;border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-color-scheme:dark){body{background:#0f172a;color:#e2e8f0}p{color:#94a3b8}.spinner{border-color:#334155;border-top-color:#94a3b8}}
+</style></head>
+<body><div class="spinner"></div><h1>Starting services…</h1>
+<p>MyGPT is starting its backend containers. The first launch downloads images and can take several minutes.</p></body></html>`
+const STARTUP_SCREEN_URL = `data:text/html;charset=utf-8,${encodeURIComponent(STARTUP_SCREEN_HTML)}`
+
+async function createWindow(showStartupScreen = false) {
   const appIcon = getAppIcon()
 
   mainWindow = new BrowserWindow({
@@ -75,23 +92,31 @@ async function createWindow() {
     }
   }
 
+  if (showStartupScreen) {
+    void mainWindow.loadURL(STARTUP_SCREEN_URL)
+  } else {
+    loadAppContent(mainWindow)
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
+}
+
+function loadAppContent(win: BrowserWindow) {
   // In development, load Vite dev server; in production, load packaged build
   const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production'
 
   if (isDev) {
     const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000'
     console.log(`[Main] Loading dev server from ${devUrl}`)
-    mainWindow.loadURL(devUrl).catch(() => {
+    win.loadURL(devUrl).catch(() => {
       console.warn(`[Main] Dev server not reachable at ${devUrl}, loading packaged frontend fallback.`)
-      loadFrontendFile(mainWindow!)
+      loadFrontendFile(win)
     })
   } else {
-    loadFrontendFile(mainWindow)
+    loadFrontendFile(win)
   }
-
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
 }
 
 function loadFrontendFile(win: BrowserWindow) {
@@ -164,7 +189,7 @@ ipcMain.handle('start-backend-containers', async () => {
     const ready = started && await processManager.waitForBackendReady()
     return {
       success: ready,
-      error: ready ? undefined : 'Docker started, but the backend did not become ready.',
+      error: ready ? undefined : processManager.getLastStartError() ?? 'Docker started, but the backend did not become ready.',
     }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -192,20 +217,38 @@ app.whenReady().then(async () => {
   const runtimeConfig = runtimeConfigStore.load()
   applyRuntimeConfig(runtimeConfig)
 
-  // 1. Start Django backend
-  if (runtimeConfig.autoStartBackend && processManager.canManageDockerBackend()) {
-    try {
-      await processManager.startBackend()
-    } catch (err) {
-      console.error('[Main] Failed to start Django backend:', err)
-    }
-  }
+  const shouldStartBackend = runtimeConfig.autoStartBackend && processManager.canManageDockerBackend()
 
-  // 2. Setup Application Menu with Developer API links
+  // 1. Setup Application Menu with Developer API links
   setupApplicationMenu(processManager.getApiBaseUrl())
 
-  // 3. Create Main App Window
-  await createWindow()
+  // 2. Open the window now; the app UI loads once the backend start attempt finishes
+  await createWindow(shouldStartBackend)
+
+  // 3. Start Django backend
+  let backendStartError: string | null = null
+  if (shouldStartBackend) {
+    try {
+      const ready = await processManager.startBackend()
+      if (!ready) {
+        backendStartError = processManager.getLastStartError() ?? 'The MyGPT backend did not start.'
+      }
+    } catch (err) {
+      console.error('[Main] Failed to start Django backend:', err)
+      backendStartError = err instanceof Error ? err.message : String(err)
+    }
+    if (mainWindow) loadAppContent(mainWindow)
+  }
+
+  if (backendStartError && mainWindow) {
+    void dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'MyGPT backend is not running',
+      message: 'The MyGPT backend could not be started.',
+      detail: `${backendStartError}\n\nOnce this is resolved, open Settings > Developer / API > Runtime services and choose "Start backend containers".`,
+      buttons: ['OK'],
+    })
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

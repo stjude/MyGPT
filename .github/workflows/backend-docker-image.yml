@@ -1,46 +1,94 @@
 name: Backend Docker Image
 
 on:
-#  push:
-#   paths:
-#   - "backend/**"
-#   branches: [ "main" ]
-#  pull_request:
-#   paths:
-#   - "backend/**"
-#   branches: [ "main" ]
- workflow_dispatch:
- 
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/stjude/mygpt-backend
 
 jobs:
- build:
-  runs-on: mygpt_builder
-  permissions:
-   contents: read
-   packages: write
+  build-amd64:
+    runs-on: mygpt_builder
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  steps:
-   - name: Checkout code
-     uses: actions/checkout@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-   - name: Log	in to GitHub Container Registry
-     run: echo ${{ secrets.GITHUB_TOKEN }} | docker	login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  # build for arm64 and amd64
-   - name: Set up QEMU
-     uses: docker/setup-qemu-action@v3
+      - name: Build and push amd64
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          provenance: false
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest-amd64
 
-   - name: Set up Docker Buildx
-     uses: docker/setup-buildx-action@v3
+  # Native arm64 runner avoids slow QEMU emulation of the Python dependency install.
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-   - name: Build and push
-     uses: docker/build-push-action@v5
-     with:
-      context: backend
-      file: backend/Dockerfile
-      platforms: linux/amd64
-      # platforms: linux/amd64,linux/arm64
-      push: true
-      tags: |
-       ghcr.io/stjude/mygpt-backend:latest
-       ghcr.io/stjude/mygpt-backend:latest-amd64
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push arm64
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: linux/arm64
+          provenance: false
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest-arm64
+            ${{ env.IMAGE }}:arm64
+
+  manifest:
+    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create multi-architecture latest tag
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE:latest" \
+            "$IMAGE:latest-amd64" \
+            "$IMAGE:latest-arm64"
