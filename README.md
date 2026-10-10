@@ -46,6 +46,8 @@
 
 ChatGPT has revolutionized creative occupations, but tasks requiring factual backing suffer from generalized models and limitations such as hallucinations and inconsistency. Here, we present MyGPT — an open-source Large Language Model (LLM) pipeline to ask questions for content from a curated list of publications or video/audio lectures. MyGPT minimizes hallucination by providing a context for the question and generates accurate answers with source citing. MyGPT can run on personal devices or cloud infrastructures and can help with complex tasks such as literature review and learning. 
 
+**Research article:** DOI [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6) has been assigned but is not yet active. The DOI link and article are expected to become available in a couple of weeks. See [Citation](#citation) for citation details.
+
 ## Pipeline
 
 <img src='./images/pipeline.png' width='800px' alt='MyGPT pipeline'>
@@ -56,6 +58,11 @@ We have divided the MyGPT pipeline architecture into three sections:
 3. <ins>LLM server</ins>: The LLM server is responsible for generating answers to the questions asked by the user. We are using Ollama for the LLM server.
 
 ## Installation
+
+> [!IMPORTANT]
+> **The web app is the recommended way to use MyGPT.** Follow the [personal computer](#personal-computer), [server/VM](#server-or-vm-with-gpu), or [Azure](#cloud-services-azure) installation guide to run MyGPT in your browser.
+>
+> **Desktop distribution is a work in progress.** Current macOS downloads are not yet Developer ID signed and notarized, so macOS may display an "unidentified developer" or "Apple cannot check it for malicious software" warning and block the app from opening. Company-managed Macs may prohibit overrides entirely. We are working with St. Jude's Apple support team toward signed and notarized releases; no availability date is confirmed. See the [desktop limitations](./electron/README.md#current-limitations-and-signing-status) before downloading.
 
 Before running any Docker Compose workflow, create the ignored runtime environment files from the tracked templates at the repository root:
 
@@ -74,6 +81,8 @@ MyGPT can be installed on following environments:
 - [Cloud services (Azure)](#cloud-services-azure)
 
 ### Desktop Application
+
+**Use the web app for now if you need to avoid desktop installation and trust restrictions.** macOS signing and notarization are still in progress, and company-managed laptops may not permit the current desktop app to launch. A future signed release will still be subject to your organization's IT policies.
 
 MyGPT provides a native desktop application with modern window management, local Docker orchestration, and in-app developer settings:
 
@@ -142,11 +151,11 @@ Check out the [FAQs](./FAQs.md) for common questions and answers.
 
 ## Citation
 
-The research paper describing MyGPT is currently **in press**. Please use the following citation until the final publication details are available:
+The research paper describing MyGPT is currently **in press** and has been assigned DOI [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6). **The DOI is not yet active; the DOI link and article are expected to become available in a couple of weeks.** Please use the following citation until the final publication details are available:
 
-> Patel J, Downing J, Ferguson H, You T, Malinverni D, Mathew D A S, Chen I, Sluter M, Moorefield B, Parej K, Ragavan M, Morris C, Keerthi D, Becerra Armada D, Meszaros B, Trivedi V, Alam S, Woodard A, Alford D, Pathak S, Li C, Umeton R, Rodriguez-Galindo C, Lam CG, Gottschalk S, Kalodimos CG, Babu MM. Democratizing reliable knowledge-seeking with MyGPT: A Privacy-First, Open-Source Retrieval-Augmented Generation Platform. In press.
+> Patel J, Downing J, Ferguson H, You T, Malinverni D, Mathew D A S, Chen I, Sluter M, Moorefield B, Parej K, Ragavan M, Morris C, Keerthi D, Becerra Armada D, Meszaros B, Trivedi V, Alam S, Woodard A, Alford D, Pathak S, Li C, Umeton R, Rodriguez-Galindo C, Lam CG, Gottschalk S, Kalodimos CG, Babu MM. Democratizing reliable knowledge-seeking with MyGPT: A Privacy-First, Open-Source Retrieval-Augmented Generation Platform. In press. DOI: [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6).
 
-In text, cite the paper as **Patel et al. (in press)** or **(Patel et al., in press)**. The journal, volume, page numbers, publication year, and DOI will be added here once the paper is published.
+In text, cite the paper as **Patel et al. (in press)** or **(Patel et al., in press)**. The remaining publication details will be added here once the paper is published.
 
 BibTeX:
 
@@ -154,6 +163,8 @@ BibTeX:
 @article{patel2026mygpt,
 	author  = {Patel, Jaimin and Downing, Jude and Ferguson, Hugh and You, Thika and Malinverni, Duccio and Mathew D. A., Steve and Chen, Ines and Sluter, Madison and Moorefield, Beth and Parej, Katalin and Ragavan, Mukundan and Morris, Cindy and Keerthi, Dinesh and Becerra Armada, Desiree and Meszaros, Balint and Trivedi, Vikas and Alam, Shahinur and Woodard, Anthony and Alford, Dan and Pathak, Sagar and Li, Cai and Umeton, Renato and Rodriguez-Galindo, Carlos and Lam, Catherine G. and Gottschalk, Stephen and Kalodimos, Charalampos G. and Babu, M. Madan},
 	title   = {Democratizing reliable knowledge-seeking with MyGPT: A Privacy-First, Open-Source Retrieval-Augmented Generation Platform},
+	doi     = {10.1038/s41467-026-78509-6},
+	url     = {https://doi.org/10.1038/s41467-026-78509-6},
 	note    = {In press},
 }
 ```
