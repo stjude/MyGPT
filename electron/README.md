@@ -2,6 +2,19 @@
 
 This directory contains the cross-platform **Electron Desktop Application** for MyGPT, wrapping the React frontend and orchestrating the Dockerized Django backend and Ollama LLM service.
 
+> [!IMPORTANT]
+> **The web app remains the recommended way to use MyGPT. Desktop distribution is a work in progress.** Please read the limitations below before downloading, especially if you use a company-managed Mac.
+
+## Current Limitations and Signing Status
+
+**Current macOS downloads are not yet Developer ID signed and notarized.** macOS Gatekeeper may show an "unidentified developer" or "Apple cannot check it for malicious software" warning and prevent MyGPT from opening. Downloading the installer does not guarantee that your Mac will allow it to run.
+
+We are working with St. Jude's Apple support team to obtain the required certificate and prepare signed and notarized macOS releases. **No availability date is confirmed.** The existing downloads do not become trusted automatically when a certificate is obtained; users will need a new signed and notarized release.
+
+On company-managed Macs, IT policies may prevent first-launch overrides or installation altogether. Do not disable security protections or attempt to bypass your organization's policies. Ask IT about approval or managed deployment; even a future signed and notarized release may require organizational approval.
+
+**Use MyGPT in your browser instead:** follow the [macOS](../installation/macOS/README.md), [Windows](../installation/windows/README.md), or [Linux](../installation/linux/README.md) setup guide for local use, or the [server/VM](../installation/vm/README.md) or [Azure](../installation/azure/README.md) guide for a hosted deployment. If your organization already hosts MyGPT, use its web URL. The web app avoids the desktop app's Gatekeeper check, but local setup still requires the services and permissions described in those guides.
+
 ## Download Desktop Apps
 
 The following installers are available in [GitHub Release v1.0.3](https://github.com/stjude/MyGPT/releases/tag/v1.0.3):
@@ -109,7 +122,7 @@ Attach ZIPs or Windows/Linux installers only after building and testing them. Do
 Published installers are listed in [Download Desktop Apps](#download-desktop-apps). Use the exact published asset URLs when updating download links; GitHub may replace spaces in uploaded filenames with dots.
 
 ### 📖 Distribution & User Guides:
-* **macOS Local User Guide:** [MACOS_INSTALL_GUIDE.md](./MACOS_INSTALL_GUIDE.md) — share this guide with Mac users for local installation, Ollama/Docker setup, and bypassing the macOS Gatekeeper prompt.
+* **macOS Local User Guide:** [MACOS_INSTALL_GUIDE.md](./MACOS_INSTALL_GUIDE.md) — local installation, Ollama/Docker setup, and first-launch Gatekeeper instructions where permitted by your organization's policies. These instructions may not be available on managed Macs; see [Current Limitations and Signing Status](#current-limitations-and-signing-status).
 * **Remote VM & Cloud Desktop Guide:** [REMOTE_CLOUD_DESKTOP_GUIDE.md](./REMOTE_CLOUD_DESKTOP_GUIDE.md) — instructions for building and distributing desktop apps that connect to a remote VM, GPU server, or Cloud instance (Azure/AWS/GCP) with SSL and enterprise SSO.
 
 ---

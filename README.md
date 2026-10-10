@@ -46,6 +46,11 @@
 
 ChatGPT has revolutionized creative occupations, but tasks requiring factual backing suffer from generalized models and limitations such as hallucinations and inconsistency. Here, we present MyGPT — an open-source Large Language Model (LLM) pipeline to ask questions for content from a curated list of publications or video/audio lectures. MyGPT minimizes hallucination by providing a context for the question and generates accurate answers with source citing. MyGPT can run on personal devices or cloud infrastructures and can help with complex tasks such as literature review and learning. 
 
+> [!IMPORTANT]
+> **The web app is the recommended way to use MyGPT.** Follow the [personal computer](#personal-computer), [server/VM](#server-or-vm-with-gpu), or [Azure](#cloud-services-azure) installation guide to run MyGPT in your browser.
+>
+> **Desktop distribution is a work in progress.** Current macOS downloads are not yet Developer ID signed and notarized, so macOS may display an "unidentified developer" or "Apple cannot check it for malicious software" warning and block the app from opening. Company-managed Macs may prohibit overrides entirely. We are working with St. Jude's Apple support team toward signed and notarized releases; no availability date is confirmed. See the [desktop limitations](./electron/README.md#current-limitations-and-signing-status) before downloading.
+
 ## Pipeline
 
 <img src='./images/pipeline.png' width='800px' alt='MyGPT pipeline'>
@@ -74,6 +79,8 @@ MyGPT can be installed on following environments:
 - [Cloud services (Azure)](#cloud-services-azure)
 
 ### Desktop Application
+
+**Use the web app for now if you need to avoid desktop installation and trust restrictions.** macOS signing and notarization are still in progress, and company-managed laptops may not permit the current desktop app to launch. A future signed release will still be subject to your organization's IT policies.
 
 MyGPT provides a native desktop application with modern window management, local Docker orchestration, and in-app developer settings:
 
