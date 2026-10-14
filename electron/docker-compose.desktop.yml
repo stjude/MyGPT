@@ -15,9 +15,8 @@ services:
 
   backend:
     image: ghcr.io/stjude/mygpt-backend:latest
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - "/bin/sh"
-      - "-c"
       - "python3 manage.py migrate --fake sessions zero && python3 manage.py migrate --fake-initial && python3 manage.py collectstatic --no-input && python3 manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./media:/media

@@ -258,7 +258,7 @@ export class ProcessManager {
 
   private getDockerOllamaUrl(): string {
     const endpoint = new URL(this.ollamaUrl)
-    if (['localhost', '127.0.0.1', '::1'].includes(endpoint.hostname)) {
+    if (['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(endpoint.hostname)) {
       endpoint.hostname = 'host.docker.internal'
     }
     return endpoint.toString().replace(/\/$/, '')
