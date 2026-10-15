@@ -176,7 +176,8 @@ function GPTHome(props:{
 				context: sourceContexts[index]?.[referenceIndex],
 				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}),
 				defaultExpanded: referenceIndex === 0,
-				selected: selectedPaperIdx === videos.findIndex((video: any) => video.video_title === title),
+				selected: selectedPaperIdx === videos.findIndex((video: any) => video.video_title === title) &&
+					selectedStart === parseInt(startTime.split(':')[0]) * 3600 + parseInt(startTime.split(':')[1]) * 60 + parseInt(startTime.split(':')[2]),
 				onSelect: () => {
 					setselectedPaperIdx(videos.findIndex((video: any) => video.video_title === title))
 					const start = startTime.split(':')
