@@ -138,7 +138,7 @@ export function AnswerBubble({
 		<div className={'py-4 px-6 my-4 bg-panel1 dark:bg-panel4-dark rounded-lg shadow-md box2' + (darkMode ? ' llm-chat-dark' : ' llm-chat')}>
 			<div className={'flex flex-row font-bold ' + (heading ? 'justify-between' : 'justify-end')}>
 				{heading}
-				{(showMetrics || isGenerating) && (
+				{showMetrics && (
 					<div className='flex flex-col items-end py-2'>
 						{(relevance !== undefined || isGenerating) && (
 							<div className='text-white rounded-full text-xs py-1'>

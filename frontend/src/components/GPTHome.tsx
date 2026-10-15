@@ -1487,6 +1487,7 @@ function GPTHome(props:{
 									) : <div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>}
 									answer=''
 									isGenerating
+									showMetrics={!answerWithoutContext}
 									scoreColor={ConfidenceScoreColor}
 									references={questionRelevancescore[query.length-1] > 0 ? getAnswerReferences(query.length-i-1) : []}
 								>
