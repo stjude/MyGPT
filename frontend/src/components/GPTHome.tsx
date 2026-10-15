@@ -1262,7 +1262,7 @@ function GPTHome(props:{
 				{
 					query.length ? 
 					<>{ query.map((_q:any, i:any)=>(
-						<div key={i}>
+						<div key={query.length-i-1}>
 							<QuestionBubble
 								question={query[query.length-i-1].question}
 								relevance={!answerWithoutContext ? questionRelevancescore[query.length-i-1] : undefined}
