@@ -6,6 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { PaperAirplaneIcon, Cog6ToothIcon, PaperClipIcon, XMarkIcon, CheckIcon, ArrowsPointingInIcon, ArrowsPointingOutIcon, ChatBubbleLeftRightIcon, DocumentChartBarIcon, BookmarkIcon as BookmarkIconMyGPT, MagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, ArrowDownTrayIcon, Squares2X2Icon, Bars3Icon } from '@heroicons/react/24/outline'
 import { scaleSequential, interpolateRdYlGn } from 'd3'
 import MathMarkdown from './MathMarkdown'
+import { AnswerBubble, QuestionBubble, type AnswerReference } from './ChatBubbles'
 // import Feedback from './Feedback'
 import { OllamaDirectChatStream, OllamaChatStreamWithToolSupport } from '../utils/OllamaChat'
 import { OllamaDirectGenerateStream, OllamaDirectGenerateNoStream } from '../utils/OllamaGenerate'
@@ -31,7 +32,7 @@ function GPTHome(props:{
 	const [query, setQuery] = useState<any[]>([])
 	const [questionRelevancescore, setQuestionRelevancescore] = useState<any[]>([])
 	const [answerRelevancescore, setAnswerRelevancescore] = useState<any[]>([])
-	const [hallucinationIndex, setHallucinationIndex] = useState<any>([])
+	const [hallucinationIndex, setHallucinationIndex] = useState<any[]>([])
 	const [context, setContext] = useState<any>('')
 	const [relatedQuery, setRelatedQuery] = useState<any>(false)
 	const [answer, setAnswer] = useState<any>('')
@@ -48,13 +49,14 @@ function GPTHome(props:{
 	const [thoughts, setThoughts] = useState<any[]>([])
 	const [nullAnswers, setNullAnswers] = useState<any[]>([])
 	const [nullThoughts, setNullThoughts] = useState<any[]>([])
-	const [showNullAnswerIndexes, setShowNullAnswerIndexes] = useState<any>([])
+	const [showNullAnswerIndexes, setShowNullAnswerIndexes] = useState<any[]>([])
 	const [papers, setPapers] = useState<any[]>([])
 	const [focusedPapers, setFocusedPapers] = useState<string[]>([])
 	const [sections, setSections] = useState<any[]>([])
 	const [focusedSection, setFocusedSection] = useState<any>(null)
 	const [videos, setVideos] = useState<any[]>([])
 	const [sourcePapers, setSourcePapers] = useState<any[]>([])
+	const [sourceDetails, setSourceDetails] = useState<any[][]>([])
 	const [sourcePages, setSourcePages] = useState<any[]>([])
 	const [sourceContexts, setSourceContexts] = useState<any[]>([])
 	const [sourceStarts, setSourceStarts] = useState<any[]>([])
@@ -74,7 +76,6 @@ function GPTHome(props:{
 	const isDraggingThumb = useRef(false)
 	const [mediaLoading, setMediaLoading] = useState(false)
 
-	// Map page number → context strings for the most recent query, used by customTextRenderer.
 	const highlightsByPage = useMemo(() => {
 		const map: Record<number, string[]> = {}
 		if (!sourcePages.length || !sourceContexts.length) return map
@@ -87,7 +88,6 @@ function GPTHome(props:{
 		return map
 	}, [sourcePages, sourceContexts])
 
-	// Per-page stable renderer functions; recreated only when highlights or page count change.
 	const textRenderers = useMemo(() => {
 		const renderers: Record<number, (item: { str: string }) => React.ReactNode> = {}
 		for (let p = 1; p <= numPages; p++) {
@@ -96,12 +96,7 @@ function GPTHome(props:{
 				if (!contexts || !str?.trim()) return str
 				for (const ctx of contexts) {
 					if (ctx.includes(str.trim())) {
-						return (
-							<span style={{ position: 'relative', display: 'inline' }}>
-								{str}
-								<span aria-hidden="true" style={{ position: 'absolute', top: '-1px', right: 0, bottom: 0, left: 0, background: 'rgba(255,220,0,0.45)', borderRadius: '2px', pointerEvents: 'none', zIndex: 0 }} />
-							</span>
-						)
+						return <span style={{ position: 'relative', display: 'inline' }}>{str}<span aria-hidden="true" style={{ position: 'absolute', top: '-1px', right: 0, bottom: 0, left: 0, background: 'rgba(255,220,0,0.45)', borderRadius: '2px', pointerEvents: 'none', zIndex: 0 }} /></span>
 					}
 				}
 				return str
@@ -110,34 +105,19 @@ function GPTHome(props:{
 		return renderers
 	}, [highlightsByPage, numPages])
 	const [mediaLoadError, setMediaLoadError] = useState('')
-	const ConfidenceScoreColor = scaleSequential()
-		.domain([0, 100])
-		.interpolator(interpolateRdYlGn)
-
+	const ConfidenceScoreColor = scaleSequential().domain([0, 100]).interpolator(interpolateRdYlGn)
 	const [answerWithoutContext, setAnswerWithoutContext] = useState(props.currentSettings.answerWithoutContext)
-
 	const [addDemoLibrary, setAddDemoLibrary] = useState(false)
-	const [imageAttachment, setImageAttachment] = useState([])
-	const [imageBase64, setImageBase64] = useState([])
+	const [imageAttachment, setImageAttachment] = useState<any[]>([])
+	const [imageBase64, setImageBase64] = useState<any[]>([])
 	const [mcpOllamaTools, setMcpOllamaTools] = useState<any[]>([])
 	const [mcpResponse, setMcpResponse] = useState<any>('')
-	// console.log(imageAttachment)
-	// console.log(props.currentSettings.MCPTools, mcpOllamaTools)
-
-	const llmsWithToolSupport = [
-		'llama3.1', 'llama3.2', 'llama3.3', 'gpt-oss', 'gemma4'
-	]
-
-	const llmswithThinkStepSupport = [
-		'gpt-oss', 'qwen3', 'gemma4'
-	]
-
+	const llmsWithToolSupport = ['llama3.1', 'llama3.2', 'llama3.3', 'gpt-oss', 'gemma4']
+	const llmswithThinkStepSupport = ['gpt-oss', 'qwen3', 'gemma4']
 	const chatModeOptions = [
 		{ value: 'chat_with_documents', label: 'Chat with Documents' },
-		// { value: 'workflow_for_documents', label: 'Workflow for Documents' },
 		{ value: 'direct_chat', label: 'Direct chat with GPTs' },
 	]
-
 	const supportedDatasetLanguages: any = {
 		english: { language_to_full: 'English', language_to: 'en' },
 		spanish: { language_to_full: 'Spanish', language_to: 'es' },
@@ -150,8 +130,66 @@ function GPTHome(props:{
 		hindi: { language_to_full: 'Hindi', language_to: 'hi' },
 		hungarian: { language_to_full: 'Hungarian', language_to: 'hu' },
 	}
-
 	const isThinkStepSupported = llmswithThinkStepSupport.includes(props.currentSettings.selectedLlm.split(':')[0])
+	const getReferenceScores = (source: any) => [
+		{ label: 'Vector', value: source.vector_score },
+		{ label: 'BM25', value: source.bm25_score },
+		{ label: 'Reranker', value: source.reranked_score ?? source.rerank_score },
+	].filter(({ value }) => value !== undefined && value !== null)
+		.map(score => ({ ...score, value: Number(score.value) * 100 }))
+
+	const getAnswerReferences = (index: number): AnswerReference[] => {
+		const titles = sourcePapers[index] || []
+		const pageNumbers = sourcePages[index]
+		if (pageNumbers?.length) {
+			return titles.map((title: string, referenceIndex: number) => {
+				const page = pageNumbers[referenceIndex]
+				const pageKey = `${title}:${page}`
+				return ({
+				title,
+				detail: `Page ${page} of "${title}"`,
+				groupKey: pageKey,
+				colorClass: sourceColorCodes[index]?.[referenceIndex] === 'green' ? 'bg-green-600' : sourceColorCodes[index]?.[referenceIndex] === 'yellow' ? 'bg-yellow-600' : sourceColorCodes[index]?.[referenceIndex] === 'red' ? 'bg-amber-600' : '',
+				selected: selectedPaperIdx === papers.findIndex((paper: any) => paper.paper_title === title) && selectedPage === page,
+				context: sourceContexts[index]?.[referenceIndex],
+				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}),
+				defaultExpanded: referenceIndex === 0,
+				onSelect: () => {
+					setselectedPaperIdx(papers.findIndex((paper: any) => paper.paper_title === title))
+					setSelectedPage(page)
+					setFileAttachmentType('highlighted_attachment')
+				},
+			})
+			})
+		}
+
+		const startTimes = sourceStarts[index]
+		const stopTimes = sourceStops[index]
+		if (startTimes?.length && stopTimes?.length) {
+			return titles.map((title: string, referenceIndex: number) => {
+				const startTime = startTimes[referenceIndex]
+				const sourceKey = `${title}:${startTime}`
+				return ({
+				title,
+				detail: `${startTime} to ${stopTimes[referenceIndex]} of "${title}"`,
+				groupKey: sourceKey,
+				context: sourceContexts[index]?.[referenceIndex],
+				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}),
+				defaultExpanded: referenceIndex === 0,
+				selected: selectedPaperIdx === videos.findIndex((video: any) => video.video_title === title) &&
+					selectedStart === parseInt(startTime.split(':')[0]) * 3600 + parseInt(startTime.split(':')[1]) * 60 + parseInt(startTime.split(':')[2]),
+				onSelect: () => {
+					setselectedPaperIdx(videos.findIndex((video: any) => video.video_title === title))
+					const start = startTime.split(':')
+					const stop = stopTimes[referenceIndex].split(':')
+					setSelectedStart(parseInt(start[0]) * 3600 + parseInt(start[1]) * 60 + parseInt(start[2]))
+					setSelectedStop(parseInt(stop[0]) * 3600 + parseInt(stop[1]) * 60 + parseInt(stop[2]))
+				},
+			})
+			})
+		}
+		return []
+	}
 
 	// get llms from backend
 	useEffect(()=>{
@@ -230,6 +268,7 @@ function GPTHome(props:{
 				setSelectedPage(0)
 				setFileAttachmentType('paper_attachment')
 				setSourcePapers([])
+				setSourceDetails([])
 				setSourcePages([])
 				setSourceColorCodes([])
 				setSourceContexts([])
@@ -403,6 +442,7 @@ function GPTHome(props:{
 							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
 							setContext('None')
 							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, []])
+							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, []])
 							setSourceContexts((prevSourceContexts:any)=>[...prevSourceContexts, []])
 							setSourceColorCodes((prevSourceColorCodes:any)=>[...prevSourceColorCodes, []])
 							if (papers.length){
@@ -417,6 +457,7 @@ function GPTHome(props:{
 							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
 							setContext(data.context)
 							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, data.sources.map((s:any)=>s.document)])
+							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, data.sources])
 							setSourceContexts((prevSourceContexts:any)=>[...prevSourceContexts, data.sources.map((s:any)=>s.context)])
 							setSourceColorCodes((prevSourceColorCodes:any)=>[...prevSourceColorCodes, data.sources.map((s:any)=> s.color_code)]);
 							if (data.sources[0].page !== ''){
@@ -872,6 +913,7 @@ function GPTHome(props:{
 		setAnswerRelevancescore([])
 		setHallucinationIndex([])
 		setSourcePapers([])
+		setSourceDetails([])
 		setSourcePages([])
 		setSourceContexts([])
 		setSourceColorCodes([])
@@ -1220,30 +1262,42 @@ function GPTHome(props:{
 				{
 					query.length ? 
 					<>{ query.map((_q:any, i:any)=>(
-						<div key={i}>
-							<div className={'py-4 px-6 my-4 bg-panel2 dark:bg-panel3-dark rounded-lg shadow-md box2' + (props.currentSettings.darkMode ? ' user-chat-dark' : ' user-chat') }>
-								<div className='flex flex-row justify-between font-bold'>
-									<div className='text-nav dark:text-nav-dark text-sm py-2'>You</div>
-									{
-										questionRelevancescore[query.length-i-1] !== undefined  && !answerWithoutContext ? 
-										(
-											<div className='text-nav dark:text-nav-dark rounded-full text-xs py-2'>
-												Relevance 
-												<span style={{ backgroundColor: ConfidenceScoreColor(questionRelevancescore[query.length-i-1])}} 
-													className= {'py-1 px-2 m-1 rounded-full' + (questionRelevancescore[query.length-i-1] > 80 || questionRelevancescore[query.length-i-1] < 20 ? ' text-white' : ' text-nav')}>
-													{questionRelevancescore[query.length-i-1] + '%'}
-												</span>
-											</div>
-										) : ''
-									}
-									{/* <div className='text-nav text-xs py-2'>{query[query.length-i-1].related ? <LinkIcon className='w-4 h-4 inline-block'/> : null}</div> */}
-								</div>
-								<div className='text-nav dark:text-nav-dark'>{query[query.length-i-1].question}</div>
-							</div>
+						<div key={query.length-i-1}>
+							<QuestionBubble
+								question={query[query.length-i-1].question}
+								relevance={!answerWithoutContext ? questionRelevancescore[query.length-i-1] : undefined}
+								relevancePending={!answerWithoutContext && questionRelevancescore[query.length-i-1] === undefined}
+								darkMode={props.currentSettings.darkMode}
+								scoreColor={ConfidenceScoreColor}
+							/>
 							{	answers[query.length-i-1] && answers[query.length-i-1].response ?
 								// when full answers is ready to display
-								<div className={'py-4 px-6 my-4 bg-panel1 dark:bg-panel4-dark rounded-lg shadow-md box2' +  (props.currentSettings.darkMode ? ' llm-chat-dark' : ' llm-chat')}>
-								<div className='flex flex-row justify-between font-bold'>
+								<AnswerBubble
+									darkMode={props.currentSettings.darkMode}
+									heading={!answerWithoutContext ? (
+										<div>
+											<select
+												className='text-sm text-nav bg-panel3 dark:bg-panel2-dark dark:text-nav-dark p-1 rounded-md inline-block'
+												value={showNullAnswerIndexes[query.length-i-1] === true ? 'without_context' : 'with_context'}
+												onChange={(event) => setShowNullAnswerIndexes((previous:any) => [
+													...previous.slice(0, query.length-i-1),
+													event.target.value === 'without_context',
+													...previous.slice(query.length-i),
+												])}
+											>
+												<option value='with_context'>{answers[query.length-i-1].source.split(':')[0] + ' + MyGPT'}</option>
+												<option value='without_context'>{answers[query.length-i-1].source.split(':')[0]}</option>
+												</select>
+										</div>
+									) : <div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>}
+									answer=''
+									relevance={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext ? answerRelevancescore[query.length-i-1] : undefined}
+									hallucination={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext ? hallucinationIndex[query.length-i-1] : undefined}
+									showMetrics={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext}
+									scoreColor={ConfidenceScoreColor}
+									references={showNullAnswerIndexes[query.length-i-1] === false && questionRelevancescore[query.length-i-1] > 0 ? getAnswerReferences(query.length-i-1) : []}
+								>
+								{false && <div className='flex flex-row justify-between font-bold'>
 									{/* <div className='text-white text-sm py-2'>
 										{answers[query.length-i-1].source.split(':')[0] + ' + MyGPT'}
 									</div> */}
@@ -1267,7 +1321,7 @@ function GPTHome(props:{
 									</div>
 									): (<div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>)}
 									<div className='flex flex-col items-end py-2'>
-									{showNullAnswerIndexes[query.length - i - 1] === false && (
+									{false && showNullAnswerIndexes[query.length - i - 1] === false && (
 										<div className='text-white text-xs pb-1'>
 										{
 											answerRelevancescore[query.length-i-1] !== undefined && !answerWithoutContext ? 
@@ -1283,7 +1337,7 @@ function GPTHome(props:{
 										}
 										</div>
 										 )}
-										{showNullAnswerIndexes[query.length - i - 1] === false && ( 
+										{false && showNullAnswerIndexes[query.length - i - 1] === false && (
 										<div className='text-white text-xs'>
 											{
 												hallucinationIndex[query.length-i-1] !== undefined && !answerWithoutContext ? 
@@ -1300,7 +1354,7 @@ function GPTHome(props:{
 										</div>
 										 )}
 									</div>
-								</div>
+								</div>}
 								<div className='text-white whitespace-pre-wrap answer-div'>
 									{thinkAllowed && thoughts.length > 0 && (
 										<div 
@@ -1356,7 +1410,7 @@ function GPTHome(props:{
 									}}
 								/>
 								{
-								showNullAnswerIndexes[query.length - i - 1] === false && questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourcePages.length && sourcePapers[query.length-i-1] && sourcePages[query.length-i-1] ?
+								false && showNullAnswerIndexes[query.length - i - 1] === false && questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourcePages.length && sourcePapers[query.length-i-1] && sourcePages[query.length-i-1] ?
 									<>
 										<div className='text-white text-sm font-bold pt-4'>
 											{sourcePapers[query.length-i-1].length > 1 ? 'Sources' : 'Source'}
@@ -1386,7 +1440,7 @@ function GPTHome(props:{
 										))}
 									</>
 									:
-									questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourceStarts.length && sourcePapers[query.length-1] && sourceStarts[query.length-1] && sourceStops.length && sourceStops[query.length-1] ?
+									false && questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourceStarts.length && sourcePapers[query.length-1] && sourceStarts[query.length-1] && sourceStops.length && sourceStops[query.length-1] ?
 									<>
 									<div className='text-white text-sm font-bold pt-4'>
 											{sourcePapers[query.length-i-1].length > 1 ? 'Sources' : 'Source'}
@@ -1423,16 +1477,26 @@ function GPTHome(props:{
 									</>
 									: <></>
 									}
-								</div> 
+								</AnswerBubble>
 								: (
 								// when answer is being generated
-								<div className={'py-4 px-6 my-4 bg-panel1 dark:bg-panel4-dark rounded-lg shadow-md box2' + (props.currentSettings.darkMode ? ' llm-chat-dark' : ' llm-chat')}>
-									<div className='flex flex-row justify-between font-bold'>
+								<AnswerBubble
+									darkMode={props.currentSettings.darkMode}
+									heading={!answerWithoutContext ? (
+										<div className='text-white text-sm py-1'>{props.currentSettings.selectedLlm + ' + MyGPT'}</div>
+									) : <div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>}
+									answer=''
+									isGenerating
+									showMetrics={!answerWithoutContext}
+									scoreColor={ConfidenceScoreColor}
+									references={questionRelevancescore[query.length-1] > 0 ? getAnswerReferences(query.length-i-1) : []}
+								>
+									{false && <div className='flex flex-row justify-between font-bold'>
 										{!answerWithoutContext ?
 											(<div className='text-white text-sm py-1'>{props.currentSettings.selectedLlm + ' + MyGPT'}</div>)
 											:(<div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>)
 										} 
-									</div>
+									</div>}
 									{thought.length > 0 && (
 										<div className='mb-4 p-4 bg-slate-700 dark:bg-slate-800 rounded-lg border-l-4 border-blue-500'>
 											<div className='text-blue-300 text-sm font-semibold mb-2'>💭 Thinking...</div>
@@ -1449,7 +1513,7 @@ function GPTHome(props:{
 										</MathMarkdown>
 									</div>
 									{
-									questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourcePages.length && sourcePages[query.length-1] && sourcePapers[query.length-1] ?
+									false && questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourcePages.length && sourcePages[query.length-1] && sourcePapers[query.length-1] ?
 									<>
 										<div className='text-white text-sm font-bold pt-4'>
 											{sourcePapers[query.length-1].length > 1 ? 'Sources' : 'Source'}
@@ -1473,7 +1537,7 @@ function GPTHome(props:{
 											</div>
 										))}
 									</>:
-									questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourceStarts.length && sourceStarts[query.length-1] && sourcePapers[query.length-1] && sourceStops.length && sourceStops[query.length-1] ?
+									false && questionRelevancescore[query.length-1] > 0 && sourcePapers.length && sourceStarts.length && sourceStarts[query.length-1] && sourcePapers[query.length-1] && sourceStops.length && sourceStops[query.length-1] ?
 									<>
 									<div className='text-white text-sm font-bold pt-4'>
 											{sourcePapers[query.length-i-1].length > 1 ? 'Sources' : 'Source'}
@@ -1503,7 +1567,7 @@ function GPTHome(props:{
 									</>
 									: <></>
 									}
-								</div>
+								</AnswerBubble>
 								)
 							}
 						</div>
