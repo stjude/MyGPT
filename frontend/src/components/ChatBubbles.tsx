@@ -67,7 +67,7 @@ type AnswerBubbleProps = {
 function AnswerReferenceItem({ reference, expanded, onToggle, scoreColor }: { reference: AnswerReference; expanded: boolean; onToggle: () => void; scoreColor: (score: number) => string }) {
 
 	return (
-		<div className={reference.selected ? 'bg-slate-600 dark:bg-slate-700' : ''}>
+		<div className={'bg-slate-600 dark:bg-slate-700'}>
 			<button
 				type='button'
 				className='flex w-full items-center gap-2 text-left'
@@ -86,7 +86,7 @@ function AnswerReferenceItem({ reference, expanded, onToggle, scoreColor }: { re
 			{expanded && (
 				<div>
 					{Boolean(reference.scores?.length) && (
-						<dl className='mt-1 grid grid-cols-3 gap-2 px-2 py-2 text-xs text-white'>
+						<dl className='mt-1 grid grid-cols-3 gap-2 px-2 py-1 text-xs text-white'>
 							{reference.scores?.map(score => (
 								<div key={score.label} className='flex min-w-0 flex-col items-center text-center'>
 									<dt className='text-slate-300 mb-1'>{score.label}</dt>

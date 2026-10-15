@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { scaleSequential, interpolateRdYlGn } from 'd3'
-import { ChevronDownIcon, ChevronUpIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import MathMarkdown from './MathMarkdown'
+import { AnswerBubble, QuestionBubble, type AnswerReference } from './ChatBubbles'
 
 interface ChatHistoryProps {
 	dataset: string,
@@ -64,6 +65,31 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 	const filteredChatHistory:any = chatHistory.filter((message: any) => 
 		message.question.toLowerCase().includes(searchQuery.toLowerCase())
 	)
+	const historyReferences: AnswerReference[] = (questionDetails.sources || []).map((source:any, index:number) => {
+		const title = source.paper || source.document || ''
+		const hasPage = source.page !== undefined && source.page !== ''
+		const detail = hasPage
+			? `Page ${source.page} of "${title}"`
+			: `${source.start} to ${source.stop} of "${title}"`
+		const scores = [
+			{ label: 'Vector', value: source.vector_score },
+			{ label: 'BM25', value: source.bm25_score },
+			{ label: 'Reranker', value: source.reranked_score ?? source.rerank_score },
+		]
+			.filter(({ value }) => value !== undefined && value !== null)
+			.map(score => ({ ...score, value: Number(score.value) * 100 }))
+		return {
+			title,
+			detail,
+			groupKey: `${title}:${source.page ?? source.start ?? index}`,
+			colorClass: source.color_code === 'green' ? 'bg-green-600' : source.color_code === 'yellow' ? 'bg-yellow-600' : source.color_code === 'red' ? 'bg-amber-600' : '',
+			selected: selectedSource === index,
+			context: source.context,
+			scores,
+			defaultExpanded: index === 0,
+			onSelect: () => setSelectedSource(index),
+		}
+	})
 
 	// fetch answers and sources for selected question
 	useEffect(() => {
@@ -248,6 +274,10 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 									value={searchQuery}
 									onChange={(e) => {
 										setSearchQuery(e.target.value)
+										setQuestionDetails({})
+										setSelectedSource(0)
+										setActiveAnswer(0)
+										setShowNullAnswer(false)
 										setActiveQuestion(filteredChatHistory.length > 0 ? chatHistory.findIndex((item: any) => item.question_id === filteredChatHistory[0].question_id) : 0)
 										setActiveQuestionID(filteredChatHistory.length > 0 ? filteredChatHistory[0].question_id : 0)
 										}
@@ -267,9 +297,11 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 											className={`text-white text-md cursor-pointer py-2 px-4 overflow-y-auto 
 												${activeQuestion === originalIndex ? 'font-normal bg-nav' : 'font-light bg-panel1 dark:bg-panel4-dark'}`}
 											onClick={() => {
+												setQuestionDetails({})
 												setActiveQuestion(originalIndex)
 												setActiveQuestionID(message.question_id)
 												setActiveAnswer(0)
+												setSelectedSource(0)
 												setShowNullAnswer(false)
 											}}
 										>
@@ -283,32 +315,21 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 						</div>
 					</div>
 					{/* create right side for answers and sources list */}
-					<div className={'w-2/3 bg-panel3 dark:bg-neutral-800 overflow-y-auto overflow-x-clip border-slate-400 border-y-2 ' + (window.screen.availHeight < 1000 ? 'h-[80vh] max-h-[80vh]' : 'h-[62vh] max-h-[62vh]')}>
+					<div className={'w-2/3 bg-panel3 dark:bg-neutral-800 overflow-y-auto overflow-x-clip border-slate-400 border-y-2 px-4 ' + (window.screen.availHeight < 1000 ? 'h-[80vh] max-h-[80vh]' : 'h-[62vh] max-h-[62vh]')}>
 					{ activeQuestionID === 0 ? <div className='px-4 mx-2'> No Q&A to display</div> :
 						<>
-							<div className={'py-4 px-6 m-4 bg-panel2 dark:bg-panel3-dark rounded-lg shadow-md box2' + (props.darkMode ? ' user-chat-dark' : ' user-chat')}>
-								<div className={'flex flex-row justify-between font-bold overflow-x-auto'}>
-									<div className='text-nav dark:text-nav-dark text-sm py-2'>You</div>
-									<div className='text-nav dark:text-nav-dark rounded-full text-xs py-2'>
-										Relevance 
-										<span style={{ backgroundColor: ConfidenceScoreColor(questionDetails.relevance_score)}} 
-											className= {'py-1 px-2 m-1 rounded-full' + (questionDetails.relevance_score > 80 || questionDetails.relevance_score < 20 ? ' text-white' : ' text-nav')}>
-											{questionDetails.relevance_score + '%'}
-										</span>
-									</div>
-								</div>
-								<div className='text-nav dark:text-nav-dark'>
-									<MathMarkdown>
-										{questionDetails.question}
-										</MathMarkdown>
-									</div>
-							</div>
-							<div className={'py-4 px-6 m-4 bg-panel1 dark:bg-panel4-dark rounded-lg shadow-md box2' + (props.darkMode ? ' llm-chat-dark' : ' llm-chat')}>
-							{ questionDetails.answers && questionDetails.answers.length >= 0 ?
+							<QuestionBubble
+								question={questionDetails.question || ''}
+								relevance={questionDetails.relevance_score}
+								darkMode={props.darkMode}
+								scoreColor={ConfidenceScoreColor}
+							/>
+							{ questionDetails.answers && questionDetails.answers.length > 0 ?
 								<>
-									<div className='flex flex-row justify-between font-bold'>
-											{/* <div className='text-white text-sm py-2'>{questionDetails.llm}</div> */}
-										<div className='flex flex-col gap-1'>
+									<AnswerBubble
+										key={`${activeQuestionID}:${activeAnswer}`}
+										darkMode={props.darkMode}
+										heading={<div className='flex flex-col gap-1'>
 											<select
 												className='text-sm text-nav bg-panel3 dark:bg-panel2-dark dark:text-nav-dark p-1 rounded-md inline-block'
 												value={showNullAnswer ? 'without_context': 'with_context'}
@@ -342,53 +363,16 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 													</button>
 												</div>
 											)}
-										</div>
-										<div className='text-white text-xs flex flex-col items-end py-2'>
-											<div className='text-white rounded-full text-xs py-1'>
-												Relevance 
-										<span style={{ backgroundColor: ConfidenceScoreColor(questionDetails.answers[activeAnswer].relevance_score)}} 
-											className= {'py-1 px-2 m-1 rounded-full' + (questionDetails.answers[activeAnswer].relevance_score > 80 || questionDetails.answers[activeAnswer].relevance_score < 20 ? ' text-white' : ' text-nav')}>
-											{questionDetails.answers[activeAnswer].relevance_score + '%'}
-												</span>
-											</div>
-											<div className='text-white rounded-full text-xs py-1 mt-1'>
-												Hallucination
-												<span style={{ backgroundColor: ConfidenceScoreColor(100 - hallucionationIndex)}} 
-													className= {'py-1 px-2 m-1 rounded-full' + (hallucionationIndex > 80 || hallucionationIndex < 20 ? ' text-white' : ' text-nav')}>
-													{hallucionationIndex + '%'}
-												</span>
-											</div>
-										</div>
-									</div>
-									<div className='text-white whitespace-pre-wrap answer-div'>
-									<MathMarkdown>
-										{showNullAnswer ? questionDetails.answers[activeAnswer].answer_no_context : questionDetails.answers[activeAnswer].answer}
-										</MathMarkdown>
-									</div>
-									<div className='text-white text-sm font-bold pt-4'>
-									{questionDetails.sources.length > 1 ? 'Sources' : questionDetails.sources.length === 1 ? 'Source': ''}
-								</div>
-								{questionDetails.sources.map((source:any, index:number)=>(
-									<div key={index}>
-										<div className='border border-gray-400'></div>
-										<div 
-											// className={'text-white text-sm p-2 font-normal italic' + (selectedSource === index ? ' bg-nav' : '')}
-											className={'text-white text-sm p-2 font-normal italic cursor-pointer ' +  (source.color_code === 'green' ? 'bg-green-600' : source.color_code === 'yellow' ? 'bg-yellow-600' : source.color_code === 'red' ? 'bg-amber-600' : '')}
-											onClick={() => setSelectedSource(index)}
-										>
-												{'Page ' + (source.page) + ' of "' + source.paper + '"'}
-												{selectedSource === index ? <ChevronUpIcon className='h-4 w-4 float-right'/> : <ChevronDownIcon className='h-4 w-4 float-right'/>}
-										</div>
-										{selectedSource === index ? 
-											<div className='text-white text-sm p-2 bg-slate-600 dark:bg-slate-700'>
-												<div className='text-white font-bold'>Context</div>
-												{source.context}
-											</div> : <></>
-										}
-									</div>
-								))}
-								</> : <></>}
-							</div>
+										</div>}
+										answer={showNullAnswer ? questionDetails.answers[activeAnswer].answer_no_context : questionDetails.answers[activeAnswer].answer}
+										thought=''
+										relevance={questionDetails.answers[activeAnswer].relevance_score}
+										hallucination={hallucionationIndex}
+										showMetrics
+										scoreColor={ConfidenceScoreColor}
+										references={historyReferences}
+									/>
+								</> : <div className='m-4 text-white'>No answers available</div>}
 						</>}
 					</div>
 				</div>

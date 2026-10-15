@@ -578,11 +578,9 @@ def get_question_details(request):
                 'rank': source.rank,
                 'secondary_rank': source.secondary_rank,
             })
-        # check if sources has rank, if yes, sort by rank or sort sources by vector_score and bm25_score
-        if (len(sources_json) > 0 and sources_json[0]['rank'] != 0):
-            sources_json = sorted(sources_json, key=lambda x: x['rank'])
-        else:
-            sources_json = sorted(sources_json, key=lambda x: (x['vector_score'] if 'vector_score' in x else 0) + (x['bm25_score'] if 'bm25_score' in x else 0), reverse=True)
+
+        # sort reranked sources by vector_score, then by bm25_score
+        sources_json = sorted(sources_json, key=lambda x: (x['vector_score'] if 'vector_score' in x else 0) + (x['bm25_score'] if 'bm25_score' in x else 0), reverse=True)
         answers_json = []
         for answer in answers:
             answers_json.append({
