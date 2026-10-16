@@ -32,6 +32,6 @@ bm25s
 pystemmer
 ollama>=0.6.1
 requests>=2.33.0
-Django>=5.1.15,<6.1
+Django>=5.2.15
 drf-spectacular>=0.27.0
 drf-spectacular-sidecar>=2024.1.1
