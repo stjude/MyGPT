@@ -1165,12 +1165,14 @@ def add_ollama_models(request):
         json_request = JSONParser().parse(request)
         ollama_models = json_request['llms']
         for ollama_model in ollama_models:
-            if Model.objects.filter(model_name=ollama_model['name']).count() == 0:
-                Model.objects.create(
-                    model_name=ollama_model['name'],
-                    model_size=ollama_model['size']
-                )
+            _register_ollama_model(ollama_model['name'], ollama_model['size'])
         return Response({'added':True}, content_type="application/json")
+
+def _register_ollama_model(model_name, model_size):
+    Model.objects.get_or_create(
+        model_name=model_name,
+        defaults={'model_size': model_size},
+    )
     
 @api_view(['POST'])
 def add_embedding_models(request):
@@ -1178,14 +1180,20 @@ def add_embedding_models(request):
         json_request = JSONParser().parse(request)
         embedding_models = json_request['embedding_models']
         for embedding_model in embedding_models:
-            if EmbeddingModel.objects.filter(model_name=embedding_model['name']).count() == 0:
-                EmbeddingModel.objects.create(
-                    model_name=embedding_model['name'],
-                    model_size=embedding_model['size'],
-                    model_source=embedding_model['source'],
-                )
-                get_embedding_model_ef(embedding_model['name'], True)
+            _register_embedding_model(
+                embedding_model['name'],
+                embedding_model['size'],
+                embedding_model['source'],
+            )
         return Response({'added':True}, content_type="application/json")
+
+def _register_embedding_model(model_name, model_size, model_source):
+    _, created = EmbeddingModel.objects.get_or_create(
+        model_name=model_name,
+        defaults={'model_size': model_size, 'model_source': model_source},
+    )
+    if created:
+        get_embedding_model_ef(model_name, True)
     
 @api_view(['GET'])
 def get_frontend_settings(request):
@@ -1758,10 +1766,10 @@ def get_ollama_models(request):
                 if model.size is not None and model.size > 0:
                     if model.details:
                         quantization_level = model.details.get('quantization_level', 'unknown')
-                        if quantization_level != 'F16' and not Model.objects.filter(model_name=model.model).exists():
-                            Model.objects.create(
-                                model_name=model.model,
-                                model_size=f"{(model.size * 1e-9):.2f}",
+                        if quantization_level != 'F16':
+                            _register_ollama_model(
+                                model.model,
+                                f"{(model.size * 1e-9):.2f}",
                             )
                         models.append({
                             'name': model.model,

@@ -103,7 +103,10 @@ class OllamaModelsAPITests(TestCase):
 		self.assertEqual(response.json()['models'][0]['quantization_level'], 'Q4_K_M')
 		self.assertEqual(Model.objects.count(), 2)
 		self.assertEqual(Model.objects.get(model_name='llama3:latest').model_size, '1.50')
-		ollama_client.return_value.list.assert_called_once_with()
+		second_response = APIClient().post(reverse('get_ollama_models'), {}, format='json')
+		self.assertEqual(second_response.status_code, 200)
+		self.assertEqual(Model.objects.count(), 2)
+		self.assertEqual(ollama_client.return_value.list.call_count, 2)
 
 	@patch('testdb.views.apis.OllamaClient')
 	def test_returns_server_error_when_ollama_listing_fails(self, ollama_client):
@@ -135,6 +138,16 @@ class OllamaModelsAPITests(TestCase):
 		self.assertEqual(Model.objects.count(), 2)
 		self.assertEqual(Model.objects.get(model_name='existing-model:latest').model_size, '2.00')
 		self.assertEqual(Model.objects.get(model_name='new-model:latest').model_size, '1.50')
+		second_response = APIClient().post(
+			reverse('add_ollama_models'),
+			{'llms': [
+				{'name': 'existing-model:latest', 'size': '3.00'},
+				{'name': 'new-model:latest', 'size': '1.50'},
+			]},
+			format='json',
+		)
+		self.assertEqual(second_response.status_code, 200)
+		self.assertEqual(Model.objects.count(), 2)
 
 	@patch('testdb.views.apis.OllamaClient')
 	def test_rejects_invalid_model_names_without_contacting_ollama(self, ollama_client):

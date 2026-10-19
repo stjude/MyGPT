@@ -172,6 +172,16 @@ class DatasetAPITests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(EmbeddingModel.objects.count(), 2)
 		self.assertEqual(EmbeddingModel.objects.get(model_name='existing-embed').model_size, '1.00')
+		second_response = APIClient().post(
+			reverse('add_embedding_models'),
+			{'embedding_models': [
+				{'name': 'existing-embed', 'size': '2.00', 'source': 'ollama'},
+				{'name': 'new-embed', 'size': '0.50', 'source': 'ollama'},
+			]},
+			format='json',
+		)
+		self.assertEqual(second_response.status_code, 200)
+		self.assertEqual(EmbeddingModel.objects.count(), 2)
 		get_embedding_model_ef.assert_called_once_with('new-embed', True)
 
 	def test_frontend_settings_creates_defaults_when_missing(self):

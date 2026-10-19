@@ -240,14 +240,14 @@ class Source(models.Model):
 		return self.source_doc[:15] + ', p.' + str(self.source_pointer)
 
 class Model(models.Model):
-	model_name = models.CharField(max_length=200, default='-')
+	model_name = models.CharField(max_length=200, default='-', unique=True)
 	model_size =  models.CharField(max_length=40, default='-')
 
 	def __str__(self):
 		return self.model_name
 	
 class EmbeddingModel(models.Model):
-	model_name = models.CharField(max_length=200, default='-')
+	model_name = models.CharField(max_length=200, default='-', unique=True)
 	model_size =  models.CharField(max_length=40, default='-')
 	model_source = models.CharField(max_length=40, choices=embedding_model_source, default='ollama')
 	best_distance_q = models.FloatField(default=0)

@@ -16,20 +16,12 @@ from .embedding_functions import HuggingFaceEmbeddingFunction, OllamaEmbeddingFu
 
 def get_embedding_model_ef(embedding_model_request, add_distances=False):
     """Get the embedding function for the specified model"""
-    # query embedding model from database
-    embedding_model_count = EmbeddingModel.objects.filter(model_name=embedding_model_request).count()
-    add_embedding_model_distances = False
-    if embedding_model_count == 0:
-        EmbeddingModel.objects.create(
-            model_name=embedding_model_request,
-            model_source='sentence-transformer'
-        )
-        embedding_model = embedding_model_request
-        embedding_model_source = 'sentence-transformer'
-        add_embedding_model_distances = True
-    else:
-        embedding_model = EmbeddingModel.objects.filter(model_name=embedding_model_request)[0].model_name
-        embedding_model_source = EmbeddingModel.objects.filter(model_name=embedding_model_request)[0].model_source
+    embedding_model_record, add_embedding_model_distances = EmbeddingModel.objects.get_or_create(
+        model_name=embedding_model_request,
+        defaults={'model_source': 'sentence-transformer'},
+    )
+    embedding_model = embedding_model_record.model_name
+    embedding_model_source = embedding_model_record.model_source
         
     # use multi-qa-MiniLM-L6-cos-v1 embedding function
     if embedding_model == 'all-MiniLM-L6-v2':
