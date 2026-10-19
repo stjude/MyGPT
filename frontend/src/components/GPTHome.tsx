@@ -31,7 +31,9 @@ function GPTHome(props:{
 	const [searchTerm, setSearchTerm] = useState<any>('')
 	const [query, setQuery] = useState<any[]>([])
 	const [questionRelevancescore, setQuestionRelevancescore] = useState<any[]>([])
+	const [questionRelevanceDetails, setQuestionRelevanceDetails] = useState<any[]>([])
 	const [answerRelevancescore, setAnswerRelevancescore] = useState<any[]>([])
+	const [answerRelevanceDetails, setAnswerRelevanceDetails] = useState<any[]>([])
 	const [hallucinationIndex, setHallucinationIndex] = useState<any[]>([])
 	const [context, setContext] = useState<any>('')
 	const [relatedQuery, setRelatedQuery] = useState<any>(false)
@@ -262,6 +264,11 @@ function GPTHome(props:{
 				setQuery([])
 				setAnswers([])
 				setThoughts([])
+								setQuestionRelevancescore([])
+								setQuestionRelevanceDetails([])
+								setAnswerRelevancescore([])
+								setAnswerRelevanceDetails([])
+								setHallucinationIndex([])
 				setNullAnswers([])
 				setShowNullAnswerIndexes([])
 				setselectedPaperIdx(0)
@@ -440,6 +447,7 @@ function GPTHome(props:{
 					.then((data:any) => {
 						if (data.relevance_score === 0){
 							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
+							setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
 							setContext('None')
 							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, []])
 							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, []])
@@ -455,6 +463,7 @@ function GPTHome(props:{
 							setTranslatedAnswerReceived(false)
 						}else{
 							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
+							setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
 							setContext(data.context)
 							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, data.sources.map((s:any)=>s.document)])
 							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, data.sources])
@@ -681,6 +690,7 @@ function GPTHome(props:{
 				.then(data => {
 					// console.log(data)
 					setAnswerRelevancescore((prevAnswerRelevancescore:any)=>[...prevAnswerRelevancescore, data.relevance_score])
+						setAnswerRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
 					setHallucinationIndex((prevHallucinationIndex:any)=>[...prevHallucinationIndex, data.hallucination_index_by_ml])
 					setContext('')
 					setAnswer('')
@@ -785,6 +795,7 @@ function GPTHome(props:{
 				.then(data => {
 					// console.log(data)
 					setAnswerRelevancescore((prevAnswerRelevancescore:any)=>[...prevAnswerRelevancescore, data.relevance_score])
+					setAnswerRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
 					setHallucinationIndex((prevHallucinationIndex:any)=>[...prevHallucinationIndex, data.hallucination_index_by_ml])
 					setAnswer('')
 					setAnswerReceived(false)
@@ -910,7 +921,9 @@ function GPTHome(props:{
 		setNullThoughts([])
 		setShowNullAnswerIndexes([])
 		setQuestionRelevancescore([])
+		setQuestionRelevanceDetails([])
 		setAnswerRelevancescore([])
+		setAnswerRelevanceDetails([])
 		setHallucinationIndex([])
 		setSourcePapers([])
 		setSourceDetails([])
@@ -1267,6 +1280,7 @@ function GPTHome(props:{
 								question={query[query.length-i-1].question}
 								relevance={!answerWithoutContext ? questionRelevancescore[query.length-i-1] : undefined}
 								relevancePending={!answerWithoutContext && questionRelevancescore[query.length-i-1] === undefined}
+								relevanceDetails={questionRelevanceDetails[query.length-i-1]}
 								darkMode={props.currentSettings.darkMode}
 								scoreColor={ConfidenceScoreColor}
 							/>
@@ -1292,6 +1306,7 @@ function GPTHome(props:{
 									) : <div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>}
 									answer=''
 									relevance={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext ? answerRelevancescore[query.length-i-1] : undefined}
+									relevanceDetails={showNullAnswerIndexes[query.length-i-1] === false ? answerRelevanceDetails[query.length-i-1] : undefined}
 									hallucination={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext ? hallucinationIndex[query.length-i-1] : undefined}
 									showMetrics={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext}
 									scoreColor={ConfidenceScoreColor}

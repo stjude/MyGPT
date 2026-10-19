@@ -321,6 +321,11 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 							<QuestionBubble
 								question={questionDetails.question || ''}
 								relevance={questionDetails.relevance_score}
+								relevanceDetails={{
+									semantic: questionDetails.semantic_score,
+									keyword: questionDetails.keyword_score,
+									rerank: questionDetails.rerank_score,
+								}}
 								darkMode={props.darkMode}
 								scoreColor={ConfidenceScoreColor}
 							/>
@@ -367,6 +372,11 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 										answer={showNullAnswer ? questionDetails.answers[activeAnswer].answer_no_context : questionDetails.answers[activeAnswer].answer}
 										thought=''
 										relevance={questionDetails.answers[activeAnswer].relevance_score}
+										relevanceDetails={{
+											semantic: questionDetails.answers[activeAnswer].semantic_score,
+											keyword: questionDetails.answers[activeAnswer].keyword_score,
+											rerank: questionDetails.answers[activeAnswer].rerank_score,
+										}}
 										hallucination={hallucionationIndex}
 										showMetrics
 										scoreColor={ConfidenceScoreColor}

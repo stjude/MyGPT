@@ -7,6 +7,12 @@ export type AnswerReferenceScore = {
 	value: number
 }
 
+export type CompositeRelevanceDetails = {
+	semantic?: number
+	keyword?: number
+	rerank?: number
+}
+
 export type AnswerReference = {
 	title: string
 	detail: string
@@ -23,11 +29,48 @@ type QuestionBubbleProps = {
 	question: string
 	relevance?: number
 	relevancePending?: boolean
+	relevanceDetails?: CompositeRelevanceDetails
 	darkMode: boolean
 	scoreColor: (score: number) => string
 }
 
-export function QuestionBubble({ question, relevance, relevancePending = false, darkMode, scoreColor }: QuestionBubbleProps) {
+function RelevanceScoreDetails({ kind, details, scoreColor }: { kind: 'QRS' | 'ARS'; details?: CompositeRelevanceDetails; scoreColor: (score: number) => string }) {
+	const [expanded, setExpanded] = useState(false)
+	const scores = kind === 'QRS'
+		? [{ label: 'Qsem', value: details?.semantic }, { label: 'Qkey', value: details?.keyword }, { label: 'Qrerank', value: details?.rerank }]
+		: [{ label: 'Asem', value: details?.semantic }, { label: 'Akey', value: details?.keyword }, { label: 'Arerank', value: details?.rerank }]
+	const availableScores = scores.filter((score): score is { label: string; value: number } => score.value !== undefined && score.value !== null)
+
+	if (!availableScores.length) return null
+
+	return (
+		<div className='relative mt-1 text-right'>
+			<button
+				type='button'
+				className='inline-flex items-center gap-1 text-[10px] font-normal text-white/80 hover:text-white'
+				aria-expanded={expanded}
+				onClick={() => setExpanded(!expanded)}
+			>
+				{kind} details
+				{expanded ? <ChevronUpIcon className='h-3 w-3' /> : <ChevronDownIcon className='h-3 w-3' />}
+			</button>
+			{expanded && (
+				<div className='absolute right-0 top-full z-20 mt-1 w-36 rounded bg-slate-800/70 p-2 text-left text-[10px] font-normal text-white shadow-lg'>
+					{availableScores.map(score => (
+						<div key={score.label} className='flex items-center justify-between gap-2 py-0.5'>
+							<span className='text-white/70'>{score.label}</span>
+							<span style={{ backgroundColor: scoreColor(score.value) }} className={'rounded-full px-2 py-0.5 font-semibold' + (score.value > 80 || score.value < 20 ? ' text-white' : ' text-nav')}>
+								{Math.round(score.value)}%
+							</span>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	)
+}
+
+export function QuestionBubble({ question, relevance, relevancePending = false, relevanceDetails, darkMode, scoreColor }: QuestionBubbleProps) {
 	return (
 		<div className={'py-4 px-6 my-4 bg-panel2 dark:bg-panel3-dark rounded-lg shadow-md box2' + (darkMode ? ' user-chat-dark' : ' user-chat')}>
 			<div className='flex flex-row justify-between font-bold'>
@@ -38,6 +81,7 @@ export function QuestionBubble({ question, relevance, relevancePending = false, 
 						<span style={relevance === undefined ? undefined : { backgroundColor: scoreColor(relevance) }} className={'py-1 px-2 m-1 rounded-full' + (relevance === undefined ? ' bg-slate-500 text-white' : relevance > 80 || relevance < 20 ? ' text-white' : ' text-nav')}>
 							{relevance === undefined ? '...' : relevance + '%'}
 						</span>
+						<RelevanceScoreDetails kind='QRS' details={relevanceDetails} scoreColor={scoreColor} />
 					</div>
 				)}
 			</div>
@@ -56,6 +100,7 @@ type AnswerBubbleProps = {
 	onToggleThinking?: () => void
 	isGenerating?: boolean
 	relevance?: number
+	relevanceDetails?: CompositeRelevanceDetails
 	hallucination?: number
 	showMetrics?: boolean
 	scoreColor: (score: number) => string
@@ -116,6 +161,7 @@ export function AnswerBubble({
 	onToggleThinking,
 	isGenerating = false,
 	relevance,
+	relevanceDetails,
 	hallucination,
 	showMetrics = false,
 	scoreColor,
@@ -146,6 +192,7 @@ export function AnswerBubble({
 								<span style={relevance === undefined ? undefined : { backgroundColor: scoreColor(relevance) }} className={'py-1 px-2 m-1 rounded-full' + (relevance === undefined ? ' bg-slate-500 text-white' : relevance > 80 || relevance < 20 ? ' text-white' : ' text-nav')}>
 									{relevance === undefined ? '...' : relevance + '%'}
 								</span>
+								<RelevanceScoreDetails kind='ARS' details={relevanceDetails} scoreColor={scoreColor} />
 							</div>
 						)}
 						{(hallucination !== undefined || isGenerating) && (
