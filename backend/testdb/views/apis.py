@@ -575,19 +575,21 @@ def get_question_details(request):
                 'bm25_score_raw': source.bm25_score_raw,
                 'bm25_score': source.bm25_score,
                 'rerank_score': source.rerank_score,
+                'rerank_sentiment': source.rerank_entailment,
                 'rank': source.rank,
                 'secondary_rank': source.secondary_rank,
             })
-        # check if sources has rank, if yes, sort by rank or sort sources by vector_score and bm25_score
-        if (len(sources_json) > 0 and sources_json[0]['rank'] != 0):
-            sources_json = sorted(sources_json, key=lambda x: x['rank'])
-        else:
-            sources_json = sorted(sources_json, key=lambda x: (x['vector_score'] if 'vector_score' in x else 0) + (x['bm25_score'] if 'bm25_score' in x else 0), reverse=True)
+
+        # sort reranked sources by vector_score, then by bm25_score
+        sources_json = sorted(sources_json, key=lambda x: (x['vector_score'] if 'vector_score' in x else 0) + (x['bm25_score'] if 'bm25_score' in x else 0), reverse=True)
         answers_json = []
         for answer in answers:
             answers_json.append({
                 'answer': answer.answer_text,
                 'relevance_score': answer.relevance_score,
+                'semantic_score': answer.semantic_score,
+                'keyword_score': answer.keyword_score,
+                'rerank_score': answer.rerank_score,
                 'hallucination_index_by_equation': answer.hallucination_index_by_equation,
                 'hallucination_index_by_ml': answer.hallucination_index_by_ml,
                 'answer_no_context': answer.answer_no_context_text,
@@ -607,6 +609,9 @@ def get_question_details(request):
         question_json = {
             'question': question.question_text,
             'relevance_score': question.relevance_score,
+            'semantic_score': question.semantic_score,
+            'keyword_score': question.keyword_score,
+            'rerank_score': question.rerank_score,
             'ground_truth': question.ground_truth,
             'question_type': question.question_type,
             'keywords': question.keywords,
@@ -1167,12 +1172,14 @@ def add_ollama_models(request):
         json_request = JSONParser().parse(request)
         ollama_models = json_request['llms']
         for ollama_model in ollama_models:
-            if Model.objects.filter(model_name=ollama_model['name']).count() == 0:
-                Model.objects.create(
-                    model_name=ollama_model['name'],
-                    model_size=ollama_model['size']
-                )
+            _register_ollama_model(ollama_model['name'], ollama_model['size'])
         return Response({'added':True}, content_type="application/json")
+
+def _register_ollama_model(model_name, model_size):
+    Model.objects.get_or_create(
+        model_name=model_name,
+        defaults={'model_size': model_size},
+    )
     
 @api_view(['POST'])
 def add_embedding_models(request):
@@ -1180,14 +1187,20 @@ def add_embedding_models(request):
         json_request = JSONParser().parse(request)
         embedding_models = json_request['embedding_models']
         for embedding_model in embedding_models:
-            if EmbeddingModel.objects.filter(model_name=embedding_model['name']).count() == 0:
-                EmbeddingModel.objects.create(
-                    model_name=embedding_model['name'],
-                    model_size=embedding_model['size'],
-                    model_source=embedding_model['source'],
-                )
-                get_embedding_model_ef(embedding_model['name'], True)
+            _register_embedding_model(
+                embedding_model['name'],
+                embedding_model['size'],
+                embedding_model['source'],
+            )
         return Response({'added':True}, content_type="application/json")
+
+def _register_embedding_model(model_name, model_size, model_source):
+    _, created = EmbeddingModel.objects.get_or_create(
+        model_name=model_name,
+        defaults={'model_size': model_size, 'model_source': model_source},
+    )
+    if created:
+        get_embedding_model_ef(model_name, True)
     
 @api_view(['GET'])
 def get_frontend_settings(request):
@@ -1760,10 +1773,10 @@ def get_ollama_models(request):
                 if model.size is not None and model.size > 0:
                     if model.details:
                         quantization_level = model.details.get('quantization_level', 'unknown')
-                        if quantization_level != 'F16' and not Model.objects.filter(model_name=model.model).exists():
-                            Model.objects.create(
-                                model_name=model.model,
-                                model_size=f"{(model.size * 1e-9):.2f}",
+                        if quantization_level != 'F16':
+                            _register_ollama_model(
+                                model.model,
+                                f"{(model.size * 1e-9):.2f}",
                             )
                         models.append({
                             'name': model.model,

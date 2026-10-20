@@ -6,7 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { PaperAirplaneIcon, Cog6ToothIcon, PaperClipIcon, XMarkIcon, CheckIcon, ArrowsPointingInIcon, ArrowsPointingOutIcon, ChatBubbleLeftRightIcon, DocumentChartBarIcon, BookmarkIcon as BookmarkIconMyGPT, MagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, ArrowDownTrayIcon, Squares2X2Icon, Bars3Icon } from '@heroicons/react/24/outline'
 import { scaleSequential, interpolateRdYlGn } from 'd3'
 import MathMarkdown from './MathMarkdown'
-import { AnswerBubble, QuestionBubble, type AnswerReference } from './ChatBubbles'
+import { AnswerBubble, QuestionBubble, type AnswerReference, type AnswerReferenceScore } from './ChatBubbles'
 // import Feedback from './Feedback'
 import { OllamaDirectChatStream, OllamaChatStreamWithToolSupport } from '../utils/OllamaChat'
 import { OllamaDirectGenerateStream, OllamaDirectGenerateNoStream } from '../utils/OllamaGenerate'
@@ -31,7 +31,10 @@ function GPTHome(props:{
 	const [searchTerm, setSearchTerm] = useState<any>('')
 	const [query, setQuery] = useState<any[]>([])
 	const [questionRelevancescore, setQuestionRelevancescore] = useState<any[]>([])
+	const [questionRelevanceDetails, setQuestionRelevanceDetails] = useState<any[]>([])
 	const [answerRelevancescore, setAnswerRelevancescore] = useState<any[]>([])
+	const [answerRelevanceDetails, setAnswerRelevanceDetails] = useState<any[]>([])
+	const [answerSourceDetails, setAnswerSourceDetails] = useState<any[][]>([])
 	const [hallucinationIndex, setHallucinationIndex] = useState<any[]>([])
 	const [context, setContext] = useState<any>('')
 	const [relatedQuery, setRelatedQuery] = useState<any>(false)
@@ -131,12 +134,29 @@ function GPTHome(props:{
 		hungarian: { language_to_full: 'Hungarian', language_to: 'hu' },
 	}
 	const isThinkStepSupported = llmswithThinkStepSupport.includes(props.currentSettings.selectedLlm.split(':')[0])
-	const getReferenceScores = (source: any) => [
-		{ label: 'Vector', value: source.vector_score },
-		{ label: 'BM25', value: source.bm25_score },
-		{ label: 'Reranker', value: source.reranked_score ?? source.rerank_score },
-	].filter(({ value }) => value !== undefined && value !== null)
-		.map(score => ({ ...score, value: Number(score.value) * 100 }))
+	const getReferenceScores = (source: any, answerSource?: any): AnswerReferenceScore[] => {
+		const retrievalScores: AnswerReferenceScore[] = [
+			{ label: 'Vector', value: Number(source.vector_score) * 100 },
+			{ label: 'BM25', value: Number(source.bm25_score) * 100 },
+			{ label: 'Reranker', value: Number(source.reranked_score ?? source.rerank_score) * 100 },
+		].filter(({ value }, index) => {
+			const rawValue = [source.vector_score, source.bm25_score, source.reranked_score ?? source.rerank_score][index]
+			return rawValue !== undefined && rawValue !== null
+		})
+		const entailment = answerSource?.rerank_sentiment
+		return entailment ? [...retrievalScores, { label: 'Entailment', value: String(entailment) }] : retrievalScores
+	}
+
+	const getAnswerSource = (index: number, title: string, page?: any, rank?: number) => {
+		const answerSources = answerSourceDetails[index] || []
+		const rankedSource = rank === undefined ? undefined : answerSources.find((source: any) => source.rank === rank)
+		return rankedSource || answerSources.find((source: any) => {
+			const sourceTitle = source.paper || source.document
+			const sameTitle = sourceTitle === title
+			const samePage = page === undefined || page === '' || String(source.page) === String(page)
+			return sameTitle && samePage
+		})
+	}
 
 	const getAnswerReferences = (index: number): AnswerReference[] => {
 		const titles = sourcePapers[index] || []
@@ -152,7 +172,7 @@ function GPTHome(props:{
 				colorClass: sourceColorCodes[index]?.[referenceIndex] === 'green' ? 'bg-green-600' : sourceColorCodes[index]?.[referenceIndex] === 'yellow' ? 'bg-yellow-600' : sourceColorCodes[index]?.[referenceIndex] === 'red' ? 'bg-amber-600' : '',
 				selected: selectedPaperIdx === papers.findIndex((paper: any) => paper.paper_title === title) && selectedPage === page,
 				context: sourceContexts[index]?.[referenceIndex],
-				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}),
+				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}, getAnswerSource(index, title, page, sourceDetails[index]?.[referenceIndex]?.rank)),
 				defaultExpanded: referenceIndex === 0,
 				onSelect: () => {
 					setselectedPaperIdx(papers.findIndex((paper: any) => paper.paper_title === title))
@@ -174,7 +194,7 @@ function GPTHome(props:{
 				detail: `${startTime} to ${stopTimes[referenceIndex]} of "${title}"`,
 				groupKey: sourceKey,
 				context: sourceContexts[index]?.[referenceIndex],
-				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}),
+				scores: getReferenceScores(sourceDetails[index]?.[referenceIndex] || {}, getAnswerSource(index, title, undefined, sourceDetails[index]?.[referenceIndex]?.rank)),
 				defaultExpanded: referenceIndex === 0,
 				selected: selectedPaperIdx === videos.findIndex((video: any) => video.video_title === title) &&
 					selectedStart === parseInt(startTime.split(':')[0]) * 3600 + parseInt(startTime.split(':')[1]) * 60 + parseInt(startTime.split(':')[2]),
@@ -262,6 +282,12 @@ function GPTHome(props:{
 				setQuery([])
 				setAnswers([])
 				setThoughts([])
+								setQuestionRelevancescore([])
+								setQuestionRelevanceDetails([])
+								setAnswerRelevancescore([])
+								setAnswerRelevanceDetails([])
+								setAnswerSourceDetails([])
+								setHallucinationIndex([])
 				setNullAnswers([])
 				setShowNullAnswerIndexes([])
 				setselectedPaperIdx(0)
@@ -440,6 +466,7 @@ function GPTHome(props:{
 					.then((data:any) => {
 						if (data.relevance_score === 0){
 							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
+							setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
 							setContext('None')
 							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, []])
 							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, []])
@@ -455,6 +482,7 @@ function GPTHome(props:{
 							setTranslatedAnswerReceived(false)
 						}else{
 							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
+							setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
 							setContext(data.context)
 							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, data.sources.map((s:any)=>s.document)])
 							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, data.sources])
@@ -681,6 +709,8 @@ function GPTHome(props:{
 				.then(data => {
 					// console.log(data)
 					setAnswerRelevancescore((prevAnswerRelevancescore:any)=>[...prevAnswerRelevancescore, data.relevance_score])
+						setAnswerRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
+						setAnswerSourceDetails((previous:any[][]) => [...previous, data.sources || []])
 					setHallucinationIndex((prevHallucinationIndex:any)=>[...prevHallucinationIndex, data.hallucination_index_by_ml])
 					setContext('')
 					setAnswer('')
@@ -785,6 +815,8 @@ function GPTHome(props:{
 				.then(data => {
 					// console.log(data)
 					setAnswerRelevancescore((prevAnswerRelevancescore:any)=>[...prevAnswerRelevancescore, data.relevance_score])
+					setAnswerRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
+					setAnswerSourceDetails((previous:any[][]) => [...previous, data.sources || []])
 					setHallucinationIndex((prevHallucinationIndex:any)=>[...prevHallucinationIndex, data.hallucination_index_by_ml])
 					setAnswer('')
 					setAnswerReceived(false)
@@ -910,7 +942,10 @@ function GPTHome(props:{
 		setNullThoughts([])
 		setShowNullAnswerIndexes([])
 		setQuestionRelevancescore([])
+		setQuestionRelevanceDetails([])
 		setAnswerRelevancescore([])
+		setAnswerRelevanceDetails([])
+		setAnswerSourceDetails([])
 		setHallucinationIndex([])
 		setSourcePapers([])
 		setSourceDetails([])
@@ -1267,6 +1302,7 @@ function GPTHome(props:{
 								question={query[query.length-i-1].question}
 								relevance={!answerWithoutContext ? questionRelevancescore[query.length-i-1] : undefined}
 								relevancePending={!answerWithoutContext && questionRelevancescore[query.length-i-1] === undefined}
+								relevanceDetails={questionRelevanceDetails[query.length-i-1]}
 								darkMode={props.currentSettings.darkMode}
 								scoreColor={ConfidenceScoreColor}
 							/>
@@ -1292,6 +1328,7 @@ function GPTHome(props:{
 									) : <div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>}
 									answer=''
 									relevance={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext ? answerRelevancescore[query.length-i-1] : undefined}
+									relevanceDetails={showNullAnswerIndexes[query.length-i-1] === false ? answerRelevanceDetails[query.length-i-1] : undefined}
 									hallucination={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext ? hallucinationIndex[query.length-i-1] : undefined}
 									showMetrics={showNullAnswerIndexes[query.length-i-1] === false && !answerWithoutContext}
 									scoreColor={ConfidenceScoreColor}
