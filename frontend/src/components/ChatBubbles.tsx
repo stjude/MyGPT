@@ -4,7 +4,7 @@ import MathMarkdown from './MathMarkdown'
 
 export type AnswerReferenceScore = {
 	label: string
-	value: number
+	value: number | string
 }
 
 export type CompositeRelevanceDetails = {
@@ -67,7 +67,7 @@ function RelevanceScoreDetails({ kind, details, scoreColor }: { kind: 'QRS' | 'A
 				</div>
 			)}
 		</div>
-	)
+ 	)
 }
 
 export function QuestionBubble({ question, relevance, relevancePending = false, relevanceDetails, darkMode, scoreColor }: QuestionBubbleProps) {
@@ -131,14 +131,20 @@ function AnswerReferenceItem({ reference, expanded, onToggle, scoreColor }: { re
 			{expanded && (
 				<div>
 					{Boolean(reference.scores?.length) && (
-						<dl className='mt-1 grid grid-cols-3 gap-2 px-2 py-1 text-xs text-white'>
+						<dl className='mt-1 grid grid-cols-2 gap-2 px-2 py-1 text-xs text-white sm:grid-cols-4'>
 							{reference.scores?.map(score => (
 								<div key={score.label} className='flex min-w-0 flex-col items-center text-center'>
 									<dt className='text-slate-300 mb-1'>{score.label}</dt>
 									<dd>
-										<span style={{ backgroundColor: scoreColor(score.value) }} className={'inline-block py-1 px-2 rounded-full font-semibold' + (score.value > 80 || score.value < 20 ? ' text-white' : ' text-nav')}>
-											{score.value.toFixed(2)}%
-										</span>
+											{typeof score.value === 'number' ? (
+												<span style={{ backgroundColor: scoreColor(score.value) }} className={'inline-block py-1 px-2 rounded-full font-semibold' + (score.value > 80 || score.value < 20 ? ' text-white' : ' text-nav')}>
+													{score.value.toFixed(2)}%
+												</span>
+											) : (
+												<span className={'inline-block rounded-full px-2 py-1 font-semibold ' + (score.value.toLowerCase() === 'entailment' ? 'bg-green-700 text-white' : score.value.toLowerCase() === 'contradiction' ? 'bg-red-700 text-white' : score.value.toLowerCase() === 'neutral' ? 'bg-yellow-500 text-slate-900' : 'bg-slate-600 text-white')}>
+													{score.value}
+												</span>
+											)}
 									</dd>
 								</div>
 							))}

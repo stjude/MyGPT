@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { scaleSequential, interpolateRdYlGn } from 'd3'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import MathMarkdown from './MathMarkdown'
-import { AnswerBubble, QuestionBubble, type AnswerReference } from './ChatBubbles'
+import { AnswerBubble, QuestionBubble, type AnswerReference, type AnswerReferenceScore } from './ChatBubbles'
 
 interface ChatHistoryProps {
 	dataset: string,
@@ -71,13 +71,16 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 		const detail = hasPage
 			? `Page ${source.page} of "${title}"`
 			: `${source.start} to ${source.stop} of "${title}"`
-		const scores = [
+		const scores: AnswerReferenceScore[] = [
 			{ label: 'Vector', value: source.vector_score },
 			{ label: 'BM25', value: source.bm25_score },
 			{ label: 'Reranker', value: source.reranked_score ?? source.rerank_score },
 		]
 			.filter(({ value }) => value !== undefined && value !== null)
 			.map(score => ({ ...score, value: Number(score.value) * 100 }))
+		if (source.rerank_sentiment) {
+			scores.push({ label: 'Answer entailment', value: source.rerank_sentiment })
+		}
 		return {
 			title,
 			detail,
@@ -273,14 +276,20 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 									placeholder='Search questions...'
 									value={searchQuery}
 									onChange={(e) => {
-										setSearchQuery(e.target.value)
-										setQuestionDetails({})
-										setSelectedSource(0)
-										setActiveAnswer(0)
-										setShowNullAnswer(false)
-										setActiveQuestion(filteredChatHistory.length > 0 ? chatHistory.findIndex((item: any) => item.question_id === filteredChatHistory[0].question_id) : 0)
-										setActiveQuestionID(filteredChatHistory.length > 0 ? filteredChatHistory[0].question_id : 0)
+										const nextSearchQuery = e.target.value
+										const nextMatches: any[] = chatHistory.filter((message: any) => message.question.toLowerCase().includes(nextSearchQuery.toLowerCase()))
+										const nextQuestion = nextMatches[0]
+										const nextQuestionID = nextQuestion?.question_id ?? 0
+										setSearchQuery(nextSearchQuery)
+										setActiveQuestion(nextQuestion ? chatHistory.findIndex((item: any) => item.question_id === nextQuestionID) : 0)
+										if (nextQuestionID !== activeQuestionID) {
+											setQuestionDetails({})
+											setSelectedSource(0)
+											setActiveAnswer(0)
+											setShowNullAnswer(false)
+											setActiveQuestionID(nextQuestionID)
 										}
+								}
 									}
 									className='w-full px-3 py-2 text-sm text-nav dark:text-nav-dark bg-white dark:bg-gray-500 rounded-md border border-slate-400 focus:outline-none focus:border-blue-500'
 								/>
@@ -297,12 +306,14 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 											className={`text-white text-md cursor-pointer py-2 px-4 overflow-y-auto 
 												${activeQuestion === originalIndex ? 'font-normal bg-nav' : 'font-light bg-panel1 dark:bg-panel4-dark'}`}
 											onClick={() => {
-												setQuestionDetails({})
 												setActiveQuestion(originalIndex)
-												setActiveQuestionID(message.question_id)
-												setActiveAnswer(0)
-												setSelectedSource(0)
-												setShowNullAnswer(false)
+												if (message.question_id !== activeQuestionID) {
+													setQuestionDetails({})
+													setActiveQuestionID(message.question_id)
+													setActiveAnswer(0)
+													setSelectedSource(0)
+													setShowNullAnswer(false)
+												}
 											}}
 										>
 											<MathMarkdown>

@@ -575,6 +575,7 @@ def get_question_details(request):
                 'bm25_score_raw': source.bm25_score_raw,
                 'bm25_score': source.bm25_score,
                 'rerank_score': source.rerank_score,
+                'rerank_sentiment': source.rerank_entailment,
                 'rank': source.rank,
                 'secondary_rank': source.secondary_rank,
             })
@@ -586,6 +587,9 @@ def get_question_details(request):
             answers_json.append({
                 'answer': answer.answer_text,
                 'relevance_score': answer.relevance_score,
+                'semantic_score': answer.semantic_score,
+                'keyword_score': answer.keyword_score,
+                'rerank_score': answer.rerank_score,
                 'hallucination_index_by_equation': answer.hallucination_index_by_equation,
                 'hallucination_index_by_ml': answer.hallucination_index_by_ml,
                 'answer_no_context': answer.answer_no_context_text,
@@ -605,6 +609,9 @@ def get_question_details(request):
         question_json = {
             'question': question.question_text,
             'relevance_score': question.relevance_score,
+            'semantic_score': question.semantic_score,
+            'keyword_score': question.keyword_score,
+            'rerank_score': question.rerank_score,
             'ground_truth': question.ground_truth,
             'question_type': question.question_type,
             'keywords': question.keywords,

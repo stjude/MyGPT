@@ -15,10 +15,14 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.question = Question.objects.create(
 			question_text='What is MyGPT?', model_type=self.model,
 			question_dataset=self.dataset, conversation=self.conversation,
+			semantic_score=66.0, keyword_score=0.0, rerank_score=98.0,
 		)
 
 	def test_get_conversations_omits_questions_without_answers(self):
-		Answer.objects.create(answer_text='A research assistant', question=self.question, model_type=self.model)
+		Answer.objects.create(
+			answer_text='A research assistant', question=self.question, model_type=self.model,
+			relevance_score=97.0, semantic_score=67.7, keyword_score=0.0, rerank_score=91.2,
+		)
 		unanswered = Question.objects.create(
 			question_text='Unanswered', model_type=self.model,
 			question_dataset=self.dataset, conversation=self.conversation,
@@ -32,17 +36,29 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.assertNotIn(unanswered.question_text, [item['question'] for item in items])
 
 	def test_get_question_details_returns_answers_and_source_color(self):
-		Answer.objects.create(answer_text='A research assistant', question=self.question, model_type=self.model)
+		Answer.objects.create(
+			answer_text='A research assistant', question=self.question, model_type=self.model,
+			relevance_score=97.0, semantic_score=67.7, keyword_score=0.0, rerank_score=91.2,
+		)
 		Source.objects.create(
 			source_doc='paper.pdf', source_pointer=2, context='source text',
-			vector_score=0.7, question=self.question,
+			vector_score=0.7, rerank_entailment='entailment', question=self.question,
 		)
 
 		response = APIClient().get(reverse('get_question_details'), {'question_id': self.question.id})
 
 		self.assertEqual(response.status_code, 200)
-		self.assertEqual(response.json()['answers'][0]['answer'], 'A research assistant')
-		self.assertEqual(response.json()['sources'][0]['color_code'], 'green')
+		question_details = response.json()
+		self.assertEqual(question_details['semantic_score'], 66.0)
+		self.assertEqual(question_details['keyword_score'], 0.0)
+		self.assertEqual(question_details['rerank_score'], 98.0)
+		self.assertEqual(question_details['answers'][0]['answer'], 'A research assistant')
+		self.assertEqual(question_details['answers'][0]['relevance_score'], 97.0)
+		self.assertEqual(question_details['answers'][0]['semantic_score'], 67.7)
+		self.assertEqual(question_details['answers'][0]['keyword_score'], 0.0)
+		self.assertEqual(question_details['answers'][0]['rerank_score'], 91.2)
+		self.assertEqual(question_details['sources'][0]['color_code'], 'green')
+		self.assertEqual(question_details['sources'][0]['rerank_sentiment'], 'entailment')
 
 	def test_get_context_in_direct_chat_creates_question_without_retrieval(self):
 		payload = {
