@@ -1422,8 +1422,10 @@ function GPTHome(props:{
 										{showNullAnswerIndexes[query.length-i-1] === true? nullAnswers[query.length-i-1] ?? '' : answers[query.length-i-1].response ?? ''}
 									</MathMarkdown>
 								</div>
+								<p className='mt-3 text-xs italic text-white/70'>AI-generated content may be incorrect. Please verify it against the source documents.</p>
 								<Feedback
 									answer={JSON.parse(JSON.stringify(answers[query.length-i-1]))}
+									copyText={showNullAnswerIndexes[query.length-i-1] === true ? nullAnswers[query.length-i-1] ?? '' : answers[query.length-i-1].response ?? ''}
 									feedbackReceived={(answers[query.length-i-1].rating && answers[query.length-i-1].rating !== 0) ? true : false}
 									feedbackCallback={(feedback:any)=>{
 										const requestOptions = {

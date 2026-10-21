@@ -1,14 +1,26 @@
 import { useState } from 'react'
-import { HandThumbUpIcon, HandThumbDownIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { HandThumbUpIcon, HandThumbDownIcon, PaperAirplaneIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 
 function Feedback(props:{
 	answer: any,
+	copyText: string,
 	feedbackReceived: boolean,
 	feedbackCallback: any
 }){
 	const [rating, setRating] = useState<number | null>(null)
 	const [comment, setComment] = useState('')
 	const [commentSent, setCommentSent] = useState(false)
+	const [copied, setCopied] = useState(false)
+
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(props.copyText)
+			setCopied(true)
+			window.setTimeout(() => setCopied(false), 2000)
+		} catch (error) {
+			console.error('Failed to copy answer', error)
+		}
+	}
 
 	const handleRating = (value: number) => {
 		setRating(value)
@@ -60,6 +72,11 @@ function Feedback(props:{
 					</button>
 					<button onClick={() => handleRating(1)}>
 						<HandThumbUpIcon className={'w-8 h-8 inline-block mr-2 p-1 rounded-md text-white bg-slate-600 hover:text-white hover:border-transparent hover:bg-bsk_dark_blue'}/>
+					</button>
+					<button type='button' onClick={handleCopy} title={copied ? 'Answer copied' : 'Copy answer'} aria-label={copied ? 'Answer copied' : 'Copy answer'}>
+						{copied
+							? <CheckIcon className='w-8 h-8 inline-block mr-2 p-1 rounded-md text-white bg-green-700' />
+							: <ClipboardDocumentIcon className='w-8 h-8 inline-block mr-2 p-1 rounded-md text-white bg-slate-600 hover:text-white hover:border-transparent hover:bg-bsk_dark_blue' />}
 					</button>
 				</div>)
 			}
