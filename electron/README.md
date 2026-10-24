@@ -17,16 +17,16 @@ On company-managed Macs, IT policies may prevent first-launch overrides or insta
 
 ## Download Desktop Apps
 
-The following installers are available in [GitHub Release v1.0.3](https://github.com/stjude/MyGPT/releases/tag/v1.0.3):
+The following installers are available in [GitHub Release v1.1.0](https://github.com/stjude/MyGPT/releases/tag/v1.1.0):
 
 | Platform | Architecture | Download |
 | --- | --- | --- |
-| macOS | Apple Silicon (arm64) | [MyGPT-1.0.3-arm64.dmg](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3-arm64.dmg) |
-| macOS | Intel (x64) | [MyGPT-1.0.3.dmg](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3.dmg) |
-| Windows | x64 installer | [MyGPT.Setup.1.0.3.exe](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT.Setup.1.0.3.exe) |
-| Windows | x64 portable | [MyGPT.1.0.3.exe](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT.1.0.3.exe) |
-| Linux | x64 AppImage | [MyGPT-1.0.3.AppImage](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-1.0.3.AppImage) |
-| Debian / Ubuntu | amd64 package | [MyGPT-desktop_1.0.3_amd64.deb](https://github.com/stjude/MyGPT/releases/download/v1.0.3/MyGPT-desktop_1.0.3_amd64.deb) |
+| macOS | Apple Silicon (arm64) | [MyGPT-1.1.0-arm64.dmg](https://github.com/stjude/MyGPT/releases/download/v1.1.0/MyGPT-1.1.0-arm64.dmg) |
+| macOS | Intel (x64) | [MyGPT-1.1.0.dmg](https://github.com/stjude/MyGPT/releases/download/v1.1.0/MyGPT-1.1.0.dmg) |
+| Windows | x64 installer | [MyGPT.Setup.1.1.0.exe](https://github.com/stjude/MyGPT/releases/download/v1.1.0/MyGPT.Setup.1.1.0.exe) |
+| Windows | x64 portable | [MyGPT.1.1.0.exe](https://github.com/stjude/MyGPT/releases/download/v1.1.0/MyGPT.1.1.0.exe) |
+| Linux | x64 AppImage | [MyGPT-1.1.0.AppImage](https://github.com/stjude/MyGPT/releases/download/v1.1.0/MyGPT-1.1.0.AppImage) |
+| Debian / Ubuntu | amd64 package | [MyGPT-desktop_1.1.0_amd64.deb](https://github.com/stjude/MyGPT/releases/download/v1.1.0/MyGPT-desktop_1.1.0_amd64.deb) |
 
 Installed desktop apps do not require Node.js or a source checkout. For local services, install and start Docker Desktop and Ollama. For a remote backend, configure **Settings > Developer / API > Runtime services** instead; see the [remote desktop guide](./REMOTE_CLOUD_DESKTOP_GUIDE.md). macOS users should follow the [installation and Gatekeeper guide](./MACOS_INSTALL_GUIDE.md).
 
@@ -96,24 +96,24 @@ npm run dist:linux   # Linux AppImage & Debian package (.deb)
 ```
 
 The output installers will be placed in `electron/release/`:
-* `MyGPT-1.0.3-arm64.dmg` (for Apple Silicon M1/M2/M3/M4)
-* `MyGPT-1.0.3.dmg` (for Intel Macs)
+* `MyGPT-1.1.0-arm64.dmg` (for Apple Silicon M1/M2/M3/M4)
+* `MyGPT-1.1.0.dmg` (for Intel Macs)
 
 ### Publishing Desktop Downloads
 
 Keep installers out of Git; `electron/release/` is ignored. Distribute them as assets on [GitHub Releases](https://github.com/stjude/MyGPT/releases).
 
-1. Commit the 1.0.3 source changes and push them before creating the release tag. Keep the existing `v1.0.2` release unchanged.
-2. Rebuild the macOS installers with `npm run dist:mac` from `electron/`. Do not rename old 1.0.2 installers: the packaged app must contain version 1.0.3.
-3. On GitHub, choose **Releases > Draft a new release**, create tag `v1.0.3` on the release commit, and title the release `MyGPT Desktop 1.0.3`.
+1. Commit the 1.1.0 source changes and push them before creating the release tag. Keep the existing `v1.0.3` release unchanged.
+2. Rebuild the macOS installers with `npm run dist:mac` from `electron/`. Do not rename old 1.0.3 installers: the packaged app must contain version 1.1.0.
+3. On GitHub, choose **Releases > Draft a new release**, create tag `v1.1.0` on the release commit, and title the release `MyGPT Desktop 1.1.0`.
 4. Drag the new DMGs into the release's **Attach binaries** area. Wait for uploads to finish, then publish. To attach files after publishing, open the release, choose **Edit**, upload the files, and save.
 
 Alternatively, after creating the release, upload from the repository root with GitHub CLI:
 
 ```bash
-gh release upload v1.0.3 \
-   electron/release/MyGPT-1.0.3-arm64.dmg \
-   electron/release/MyGPT-1.0.3.dmg \
+gh release upload v1.1.0 \
+   electron/release/MyGPT-1.1.0-arm64.dmg \
+   electron/release/MyGPT-1.1.0.dmg \
    --repo stjude/MyGPT
 ```
 

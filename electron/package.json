@@ -1,6 +1,6 @@
 {
   "name": "MyGPT-desktop",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "MyGPT - Privacy-First Retrieval-Augmented Generation Desktop Application",
   "main": "dist/main.js",
   "homepage": "https://github.com/stjude/MyGPT",

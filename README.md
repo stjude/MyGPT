@@ -86,7 +86,7 @@ MyGPT can be installed on following environments:
 
 MyGPT provides a native desktop application with modern window management, local Docker orchestration, and in-app developer settings:
 
-Download the macOS, Windows, and Linux installers from [GitHub Release v1.0.3](https://github.com/stjude/MyGPT/releases/tag/v1.0.3). See the [desktop download table](./electron/README.md#download-desktop-apps) for direct links, architecture choices, and installer or portable formats. No Node.js or source checkout is needed to run an installed desktop app; local services still require Docker Desktop and Ollama.
+Download the macOS, Windows, and Linux installers from [GitHub Release v1.1.0](https://github.com/stjude/MyGPT/releases/tag/v1.1.0). See the [desktop download table](./electron/README.md#download-desktop-apps) for direct links, architecture choices, and installer or portable formats. No Node.js or source checkout is needed to run an installed desktop app; local services still require Docker Desktop and Ollama.
 
 * **macOS Local Install:** See [macOS Installation & Setup Guide](./electron/MACOS_INSTALL_GUIDE.md) for quick setup, Ollama models, and Gatekeeper instructions.
 * **Remote VM & Cloud Connected Desktop Apps:** See [Remote VM & Cloud Desktop Guide](./electron/REMOTE_CLOUD_DESKTOP_GUIDE.md) to build and distribute lightweight desktop apps connected to remote GPU servers or Azure/AWS/GCP deployments.
