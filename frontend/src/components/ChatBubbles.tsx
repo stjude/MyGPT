@@ -7,6 +7,11 @@ export type AnswerReferenceScore = {
 	value: number | string
 }
 
+export type AnswerReferenceScoreGroup = {
+	label: string
+	scores: AnswerReferenceScore[]
+}
+
 export type CompositeRelevanceDetails = {
 	semantic?: number
 	keyword?: number
@@ -20,7 +25,7 @@ export type AnswerReference = {
 	colorClass?: string
 	selected?: boolean
 	context?: string
-	scores?: AnswerReferenceScore[]
+	scores?: AnswerReferenceScoreGroup[]
 	defaultExpanded?: boolean
 	onSelect: () => void
 }
@@ -131,24 +136,31 @@ function AnswerReferenceItem({ reference, expanded, onToggle, scoreColor }: { re
 			{expanded && (
 				<div>
 					{Boolean(reference.scores?.length) && (
-						<dl className='mt-1 grid grid-cols-2 gap-2 px-2 py-1 text-xs text-white sm:grid-cols-4'>
-							{reference.scores?.map(score => (
-								<div key={score.label} className='flex min-w-0 flex-col items-center text-center'>
-									<dt className='text-slate-300 mb-1'>{score.label}</dt>
-									<dd>
-											{typeof score.value === 'number' ? (
-												<span style={{ backgroundColor: scoreColor(score.value) }} className={'inline-block py-1 px-2 rounded-full font-semibold' + (score.value > 80 || score.value < 20 ? ' text-white' : ' text-nav')}>
-													{score.value.toFixed(2)}%
-												</span>
-											) : (
-												<span className={'inline-block rounded-full px-2 py-1 font-semibold ' + (score.value.toLowerCase() === 'entailment' ? 'bg-green-700 text-white' : score.value.toLowerCase() === 'contradiction' ? 'bg-red-700 text-white' : score.value.toLowerCase() === 'neutral' ? 'bg-yellow-500 text-slate-900' : 'bg-slate-600 text-white')}>
-													{score.value}
-												</span>
-											)}
-									</dd>
+						<div className='mt-1 space-y-2 px-2 py-1 text-xs text-white'>
+							{reference.scores?.map(group => (
+								<div key={group.label}>
+									<div className='mb-1 font-semibold text-slate-300'>{group.label}</div>
+									<dl className='grid grid-cols-3 gap-2'>
+										{group.scores.map(score => (
+											<div key={score.label} className='flex min-w-0 flex-col items-center text-center'>
+												<dt className='mb-1 text-slate-300'>{score.label}</dt>
+												<dd>
+													{typeof score.value === 'number' ? (
+														<span style={{ backgroundColor: scoreColor(score.value) }} className={'inline-block py-1 px-2 rounded-full font-semibold' + (score.value > 80 || score.value < 20 ? ' text-white' : ' text-nav')}>
+															{score.value.toFixed(2)}%
+														</span>
+													) : (
+														<span className={'inline-block rounded-full px-2 py-1 font-semibold ' + (score.value.toLowerCase() === 'entailment' ? 'bg-green-700 text-white' : score.value.toLowerCase() === 'contradiction' ? 'bg-red-700 text-white' : score.value.toLowerCase() === 'neutral' ? 'bg-yellow-500 text-slate-900' : 'bg-slate-600 text-white')}>
+															{score.value}
+														</span>
+													)}
+												</dd>
+											</div>
+										))}
+									</dl>
 								</div>
 							))}
-						</dl>
+						</div>
 					)}
 					{reference.context && <div className='text-white text-sm p-2 bg-slate-600 dark:bg-slate-700'><div className='text-white font-bold'>Context</div>{reference.context}</div>}
 				</div>

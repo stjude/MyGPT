@@ -6,7 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { PaperAirplaneIcon, Cog6ToothIcon, PaperClipIcon, XMarkIcon, CheckIcon, ArrowsPointingInIcon, ArrowsPointingOutIcon, ChatBubbleLeftRightIcon, DocumentChartBarIcon, BookmarkIcon as BookmarkIconMyGPT, MagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, ArrowDownTrayIcon, Squares2X2Icon, Bars3Icon } from '@heroicons/react/24/outline'
 import { scaleSequential, interpolateRdYlGn } from 'd3'
 import MathMarkdown from './MathMarkdown'
-import { AnswerBubble, QuestionBubble, type AnswerReference, type AnswerReferenceScore } from './ChatBubbles'
+import { AnswerBubble, QuestionBubble, type AnswerReference, type AnswerReferenceScore, type AnswerReferenceScoreGroup } from './ChatBubbles'
 // import Feedback from './Feedback'
 import { OllamaDirectChatStream, OllamaChatStreamWithToolSupport } from '../utils/OllamaChat'
 import { OllamaDirectGenerateStream, OllamaDirectGenerateNoStream } from '../utils/OllamaGenerate'
@@ -134,17 +134,27 @@ function GPTHome(props:{
 		hungarian: { language_to_full: 'Hungarian', language_to: 'hu' },
 	}
 	const isThinkStepSupported = llmswithThinkStepSupport.includes(props.currentSettings.selectedLlm.split(':')[0])
-	const getReferenceScores = (source: any, answerSource?: any): AnswerReferenceScore[] => {
-		const retrievalScores: AnswerReferenceScore[] = [
-			{ label: 'Vector', value: Number(source.vector_score) * 100 },
-			{ label: 'BM25', value: Number(source.bm25_score) * 100 },
+	const getReferenceScores = (source: any, answerSource?: any): AnswerReferenceScoreGroup[] => {
+		const questionScores: AnswerReferenceScore[] = [
+			{ label: 'Semantic', value: Number(source.vector_score) * 100 },
+			{ label: 'Keyword', value: Number(source.bm25_score) * 100 },
 			{ label: 'Reranker', value: Number(source.reranked_score ?? source.rerank_score) * 100 },
 		].filter(({ value }, index) => {
 			const rawValue = [source.vector_score, source.bm25_score, source.reranked_score ?? source.rerank_score][index]
 			return rawValue !== undefined && rawValue !== null
 		})
-		const entailment = answerSource?.rerank_sentiment
-		return entailment ? [...retrievalScores, { label: 'Entailment', value: String(entailment) }] : retrievalScores
+		const answerScores: AnswerReferenceScore[] = [
+			{ label: 'Semantic', value: Number(answerSource?.answer_vector_score) * 100 },
+			{ label: 'Keyword', value: Number(answerSource?.answer_bm25_score) * 100 },
+			...(answerSource?.rerank_sentiment ? [{ label: 'Entailment', value: String(answerSource.rerank_sentiment) }] : []),
+		].filter(({ label }, index) => {
+			const rawValue = [answerSource?.answer_vector_score, answerSource?.answer_bm25_score, answerSource?.rerank_sentiment][index]
+			return rawValue !== undefined && rawValue !== null && (label !== 'Entailment' || rawValue !== '')
+		})
+		return [
+			...(questionScores.length ? [{ label: 'Question scores', scores: questionScores }] : []),
+			...(answerScores.length ? [{ label: 'Answer scores', scores: answerScores }] : []),
+		]
 	}
 
 	const getAnswerSource = (index: number, title: string, page?: any, rank?: number) => {

@@ -42,7 +42,8 @@ class ConversationAndAnswerAPITests(TestCase):
 		)
 		Source.objects.create(
 			source_doc='paper.pdf', source_pointer=2, context='source text',
-			vector_score=0.7, rerank_entailment='entailment', question=self.question,
+			vector_score=0.7, vector_score_answer=0.8, bm25_score_answer=0.6,
+			rerank_entailment='entailment', question=self.question,
 		)
 
 		response = APIClient().get(reverse('get_question_details'), {'question_id': self.question.id})
@@ -58,6 +59,8 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.assertEqual(question_details['answers'][0]['keyword_score'], 0.0)
 		self.assertEqual(question_details['answers'][0]['rerank_score'], 91.2)
 		self.assertEqual(question_details['sources'][0]['color_code'], 'green')
+		self.assertEqual(question_details['sources'][0]['answer_vector_score'], 0.8)
+		self.assertEqual(question_details['sources'][0]['answer_bm25_score'], 0.6)
 		self.assertEqual(question_details['sources'][0]['rerank_sentiment'], 'entailment')
 
 	def test_get_context_in_direct_chat_creates_question_without_retrieval(self):

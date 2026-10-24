@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { scaleSequential, interpolateRdYlGn } from 'd3'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import MathMarkdown from './MathMarkdown'
-import { AnswerBubble, QuestionBubble, type AnswerReference, type AnswerReferenceScore } from './ChatBubbles'
+import { AnswerBubble, QuestionBubble, type AnswerReference, type AnswerReferenceScore, type AnswerReferenceScoreGroup } from './ChatBubbles'
 
 interface ChatHistoryProps {
 	dataset: string,
@@ -71,16 +71,24 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 		const detail = hasPage
 			? `Page ${source.page} of "${title}"`
 			: `${source.start} to ${source.stop} of "${title}"`
-		const scores: AnswerReferenceScore[] = [
-			{ label: 'Vector', value: source.vector_score },
-			{ label: 'BM25', value: source.bm25_score },
+		const questionScores: AnswerReferenceScore[] = [
+			{ label: 'Semantic', value: source.vector_score },
+			{ label: 'Keyword', value: source.bm25_score },
 			{ label: 'Reranker', value: source.reranked_score ?? source.rerank_score },
 		]
 			.filter(({ value }) => value !== undefined && value !== null)
 			.map(score => ({ ...score, value: Number(score.value) * 100 }))
-		if (source.rerank_sentiment) {
-			scores.push({ label: 'Answer entailment', value: source.rerank_sentiment })
-		}
+		const answerScores: AnswerReferenceScore[] = [
+			{ label: 'Semantic', value: source.answer_vector_score },
+			{ label: 'Keyword', value: source.answer_bm25_score },
+			...(source.rerank_sentiment ? [{ label: 'Entailment', value: source.rerank_sentiment }] : []),
+		]
+			.filter(({ value }) => value !== undefined && value !== null)
+			.map(score => typeof score.value === 'number' && score.label !== 'Entailment' ? { ...score, value: Number(score.value) * 100 } : score)
+		const scores: AnswerReferenceScoreGroup[] = [
+			...(questionScores.length ? [{ label: 'Question scores', scores: questionScores }] : []),
+			...(answerScores.length ? [{ label: 'Answer scores', scores: answerScores }] : []),
+		]
 		return {
 			title,
 			detail,

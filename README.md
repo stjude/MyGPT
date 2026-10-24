@@ -46,7 +46,7 @@
 
 ChatGPT has revolutionized creative occupations, but tasks requiring factual backing suffer from generalized models and limitations such as hallucinations and inconsistency. Here, we present MyGPT — an open-source Large Language Model (LLM) pipeline to ask questions for content from a curated list of publications or video/audio lectures. MyGPT minimizes hallucination by providing a context for the question and generates accurate answers with source citing. MyGPT can run on personal devices or cloud infrastructures and can help with complex tasks such as literature review and learning. 
 
-**Research article:** DOI [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6) has been assigned but is not yet active. The DOI link and article are expected to become available in a couple of weeks. See [Citation](#citation) for citation details.
+**Research article:** The MyGPT article is available in early access in *Nature Communications*. Read the article via DOI [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6). See [Citation](#citation) for citation details.
 
 ## Pipeline
 
@@ -151,11 +151,11 @@ Check out the [FAQs](./FAQs.md) for common questions and answers.
 
 ## Citation
 
-The research paper describing MyGPT is currently **in press** and has been assigned DOI [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6). **The DOI is not yet active; the DOI link and article are expected to become available in a couple of weeks.** Please use the following citation until the final publication details are available:
+The research paper describing MyGPT is available in **early access** in *Nature Communications*:
 
-> Patel J, Downing J, Ferguson H, You T, Malinverni D, Mathew D A S, Chen I, Sluter M, Moorefield B, Parej K, Ragavan M, Morris C, Keerthi D, Becerra Armada D, Meszaros B, Trivedi V, Alam S, Woodard A, Alford D, Pathak S, Li C, Umeton R, Rodriguez-Galindo C, Lam CG, Gottschalk S, Kalodimos CG, Babu MM. Democratizing reliable knowledge-seeking with MyGPT: A Privacy-First, Open-Source Retrieval-Augmented Generation Platform. In press. DOI: [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6).
+> Patel J, Downing J, Ferguson H, You T, Malinverni D, Mathew D A S, Chen I, Sluter M, Moorefield B, Parej K, Ragavan M, Morris C, Keerthi D, Becerra Armada D, Meszaros B, Trivedi V, Alam S, Woodard A, Alford D, Pathak S, Li C, Umeton R, Rodriguez-Galindo C, Lam CG, Gottschalk CG, Kalodimos CG, Babu MM. Democratizing reliable knowledge-seeking with MyGPT: A Privacy-First, Open-Source Retrieval-Augmented Generation Platform. *Nature Communications*. 2026. DOI: [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6).
 
-In text, cite the paper as **Patel et al. (in press)** or **(Patel et al., in press)**. The remaining publication details will be added here once the paper is published.
+In text, cite the paper as **Patel et al. (2026)** or **(Patel et al., 2026)**.
 
 BibTeX:
 
@@ -163,9 +163,12 @@ BibTeX:
 @article{patel2026mygpt,
 	author  = {Patel, Jaimin and Downing, Jude and Ferguson, Hugh and You, Thika and Malinverni, Duccio and Mathew D. A., Steve and Chen, Ines and Sluter, Madison and Moorefield, Beth and Parej, Katalin and Ragavan, Mukundan and Morris, Cindy and Keerthi, Dinesh and Becerra Armada, Desiree and Meszaros, Balint and Trivedi, Vikas and Alam, Shahinur and Woodard, Anthony and Alford, Dan and Pathak, Sagar and Li, Cai and Umeton, Renato and Rodriguez-Galindo, Carlos and Lam, Catherine G. and Gottschalk, Stephen and Kalodimos, Charalampos G. and Babu, M. Madan},
 	title   = {Democratizing reliable knowledge-seeking with MyGPT: A Privacy-First, Open-Source Retrieval-Augmented Generation Platform},
+	journal = {Nature Communications},
+	year    = {2026},
 	doi     = {10.1038/s41467-026-78509-6},
 	url     = {https://doi.org/10.1038/s41467-026-78509-6},
-	note    = {In press},
+	note    = {Early Access},
+	archive = {10.5281/zenodo.22165249},
 }
 ```
 
