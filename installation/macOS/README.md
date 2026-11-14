@@ -127,6 +127,8 @@ docker login ghcr.io
 	cp .env_frontend.example .env_frontend
 	```
 
+	Before starting containers, open `.env_backend` in a text editor and follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY`.
+
 	Then run the containers:
 
 	```
@@ -169,7 +171,7 @@ docker login ghcr.io
 	bash installation/macOS/build_images/build_docker.sh
 	```
 
-	Before starting containers, replace all placeholders in `.env_backend` and review the public settings in `.env_frontend`.
+	Before starting containers, replace all placeholders in `.env_backend` using [Configure backend secrets](../../backend/README.md#configure-backend-secrets), and review the public settings in `.env_frontend`.
 
 3. **Run docker containers**
 

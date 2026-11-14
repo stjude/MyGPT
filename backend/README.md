@@ -18,6 +18,28 @@ cp .env_frontend.example .env_frontend
 
 Set secure database and Django values in `.env_backend`. Do not commit either environment file, and do not put secrets in `.env_frontend`; `VITE_` values are exposed to browser clients.
 
+## Configure backend secrets
+
+After copying `.env_backend.example`, open the repository-root `.env_backend` in a text editor and replace the placeholders:
+
+- **`SECRET_KEY`** is a Django signing secret, not an API token. Generate it locally rather than using a third-party key-generation website. With Python 3 installed, run this on macOS or Linux:
+
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(50))"
+  ```
+
+  On Windows, run:
+
+  ```cmd
+  py -3 -c "import secrets; print(secrets.token_urlsafe(50))"
+  ```
+
+  Copy the output into `SECRET_KEY=<generated-key>`. Use a unique key for each deployment, keep it private, and retain it across container restarts.
+
+- **`HUGGINGFACE_API_KEY`** is a Hugging Face user access token. Sign in at [Hugging Face access tokens](https://huggingface.co/settings/tokens), select **New token**, and give it a name such as `MyGPT`. A **Read** token is sufficient for downloading models your account can access. For hosted embedding inference, create a **Fine-grained** token with **Make calls to Inference Providers** permission, as required by the [feature-extraction API](https://huggingface.co/docs/inference-providers/tasks/feature-extraction). Grant model read access only where needed; repository write permission is not needed. Copy the token into `HUGGINGFACE_API_KEY=<your-token>`. For gated models, your account must also obtain access on the model's page. This token is used for Hugging Face embeddings, not local Ollama models.
+
+Keep both values only in `.env_backend`, never in `.env_frontend`, screenshots, or shared messages. Also replace the default `POSTGRES_PASSWORD` with a strong, unique database password before deploying. Save the file before starting containers; if containers are already running, recreate them to apply changed environment values.
+
 ## Run Locally
 
 From the repository root, build and start the database and backend:

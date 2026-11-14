@@ -136,6 +136,11 @@ docker login ghcr.io
 	cd MyGPT_public
 	copy .env_backend.example .env_backend
 	copy .env_frontend.example .env_frontend
+	```
+
+	Open `.env_backend` in a text editor and follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets), including the Windows command for generating `SECRET_KEY` and the steps for creating `HUGGINGFACE_API_KEY`. Save the file before running the containers:
+
+	```
 	cd installation\windows
 	run_docker.bat
 	```

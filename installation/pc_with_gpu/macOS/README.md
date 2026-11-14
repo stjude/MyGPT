@@ -90,6 +90,8 @@ We will install these two tools in the following steps:
 	bash MyGPT/installation/pc_with_gpu/macOS/set_environment.sh
 	```
 
+	The script creates `MyGPT/.env_backend` from its template if needed. Before starting containers, edit that file and follow [Configure backend secrets](../../../backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY`.
+
 3. **Build docker images**
 
 	We will run following script to build docker images:

@@ -122,6 +122,11 @@ docker login ghcr.io
 	cd MyGPT
 	cp .env_backend.example .env_backend
 	cp .env_frontend.example .env_frontend
+	```
+
+	Open `.env_backend` in a text editor and follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY`. Save the file before running the containers:
+
+	```
 	cd installation/server_or_VM/prebuilt_images_docker
 	bash run_docker.sh
 	```
@@ -162,7 +167,7 @@ docker login ghcr.io
 	bash installation/linux/build_images/build_docker.sh
 	```
 
-	Before starting containers, replace all placeholders in `.env_backend` and review the public settings in `.env_frontend`.
+	Before starting containers, replace all placeholders in `.env_backend` using [Configure backend secrets](../../backend/README.md#configure-backend-secrets), and review the public settings in `.env_frontend`.
 
 4. **Run docker containers**
 

@@ -63,6 +63,8 @@ For the demo purpose, we have hosted MyGPT on following Azure VMs. You can use t
 	vi .env_backend
 	```
 
+	Follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY`, then save `.env_backend`.
+
 	Docker Compose injects these values when the containers start. The file is excluded from Git and Docker build contexts and is not copied into the image.
 
 4. Edit the `settings.py` file in Django app
