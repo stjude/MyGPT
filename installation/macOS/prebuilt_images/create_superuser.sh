@@ -1,7 +1,7 @@
 ## create super user for backend app
 
 # find backend container id by image name
-backend_container_id=$(docker ps -aqf "ancestor=ghcr.io/stjude/mygpt-backend:latest")
+backend_container_id=$(docker ps -aqf "ancestor=ghcr.io/stjude/mygpt-backend:arm64")
 
 if [ -z "$backend_container_id" ]; then
 	backend_container_id=$(docker ps -aqf "ancestor=ghcr.io/stjude/mygpt-backend:arm64")
@@ -26,4 +26,4 @@ read superuser_email
 # you will be prompted for a password, then a QR code will be shown to scan
 # with an authenticator app before entering its current six-digit code
 echo "Creating superuser for backend app..."
-docker exec -it ${backend_container_id} python manage.py create_superuser_with_otp --username $superuser_name --email $superuser_email
+docker exec -it ${backend_container_id} python3 manage.py create_superuser_with_otp --username $superuser_name --email $superuser_email
