@@ -1,8 +1,9 @@
 import { vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import GPTHome from '../components/GPTHome'
 import defaultSettings from '../utils/DefaultState'
 import * as GPTHomeAPI from '../utils/GPTHomeAPI'
+import { OllamaDirectGenerateStream } from '../utils/OllamaGenerate'
 import '../__mocks__/intersectObserverMock'
 
 vi.mock('../utils/GPTHomeAPI', () => ({
@@ -13,6 +14,11 @@ vi.mock('../utils/GPTHomeAPI', () => ({
   addDemoLibraryRequest: vi.fn().mockResolvedValue({}),
   fetchContext: vi.fn().mockResolvedValue({ relevance_score: 0, context: '', sources: [] }),
   saveAnswer: vi.fn().mockResolvedValue({ relevance_score: 0, hallucination_index_by_ml: 0 }),
+}))
+
+vi.mock('../utils/OllamaGenerate', () => ({
+  OllamaDirectGenerateStream: vi.fn(),
+  OllamaDirectGenerateNoStream: vi.fn(),
 }))
 
 vi.mock('react-pdf', () => ({
@@ -42,6 +48,10 @@ describe('GPTHome', () => {
     GPTHomeAPI.addDemoLibraryRequest.mockResolvedValue({})
     GPTHomeAPI.fetchContext.mockResolvedValue({ relevance_score: 0, context: '', sources: [] })
     GPTHomeAPI.saveAnswer.mockResolvedValue({ relevance_score: 0, hallucination_index_by_ml: 0 })
+    OllamaDirectGenerateStream.mockImplementation(async (_model, question, _prompt, _tools, _response, _temperature, _topK, _topP, setAnswer) => {
+      setAnswer(`Answer to ${question}`)
+      return true
+    })
   })
 
   const renderGPTHome = (overrides = {}, frontendOverrides = {}) => {
@@ -94,6 +104,43 @@ describe('GPTHome', () => {
   it('shows library login message when there are no documents and user is not logged in', () => {
     renderGPTHome({ loggedin: false })
     expect(screen.getByText(/Login to view document library/i)).toBeInTheDocument()
+  })
+
+  it('answers an empty context and keeps later paper and video references aligned', async () => {
+    GPTHomeAPI.fetchContext
+      .mockResolvedValueOnce({ context: '', relevance_score: 64, semantic_score: 0, keyword_score: 0, rerank_score: 0, sources: [] })
+      .mockResolvedValueOnce({
+        context: 'Paper context', relevance_score: 80, semantic_score: 80, keyword_score: 0, rerank_score: 0,
+        sources: [{ document: 'Paper title', page: 2, start: '', stop: '', context: 'Paper context', color_code: 'green' }],
+      })
+      .mockResolvedValueOnce({
+        context: 'Video context', relevance_score: 75, semantic_score: 75, keyword_score: 0, rerank_score: 0,
+        sources: [{ document: 'Video title', page: '', start: '00:01:00', stop: '00:02:00', context: 'Video context', color_code: 'green' }],
+      })
+    renderGPTHome()
+    const input = screen.getByPlaceholderText(/Type your question here/i)
+    const ask = (question) => {
+      fireEvent.change(input, { target: { value: question } })
+      fireEvent.keyUp(input, { key: 'Enter', keyCode: 13 })
+    }
+
+    ask('First question')
+    await waitFor(() => expect(GPTHomeAPI.saveAnswer).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText('Answer to First question')).toBeInTheDocument()
+    expect(screen.getByText('64%')).toBeInTheDocument()
+    expect(OllamaDirectGenerateStream).toHaveBeenCalledWith(
+      expect.anything(), 'First question', defaultSettings.system_prompt + 'None',
+      expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.any(Function), expect.anything()
+    )
+
+    ask('Second question')
+    await waitFor(() => expect(GPTHomeAPI.saveAnswer).toHaveBeenCalledTimes(2))
+    expect(await screen.findByText('Page 2 of "Paper title"')).toBeInTheDocument()
+
+    ask('Third question')
+    await waitFor(() => expect(GPTHomeAPI.saveAnswer).toHaveBeenCalledTimes(3))
+    expect(await screen.findByText('00:01:00 to 00:02:00 of "Video title"')).toBeInTheDocument()
+    expect(screen.getByText('Page 2 of "Paper title"')).toBeInTheDocument()
   })
 
   it('loads desktop models through Electron instead of fetching Ollama from the renderer', async () => {

@@ -419,7 +419,7 @@ def get_context(request):
         # calcuate relevance score based on semantic_score, keyword_score and rerank_score with weights determined by sensitivity analysis
         relevance_score_raw = round((semantic_score/100 * weight_a) + (keyword_score * weight_b) + (rerank_score * weight_c), 2)
         # normalize relevance score to be between 0 and 100 with min-max normalization using relevance_score_min and relevance_score_max
-        relevance_score = round(min_max_normalization([relevance_score_raw], relevance_score_max, relevance_score_min, False)[0] * 100, 0)
+        relevance_score = round(min_max_normalization([relevance_score_raw], relevance_score_max, relevance_score_min, False)[0] * 100, 0) if reranked_sources and not no_context else 0
 
         # reranked sources based on vector_score + bm25_score
         # reranked_sources = rerank_sources(combined_sources, question_text)
@@ -688,7 +688,7 @@ def save_answer(request):
             # if source.bm25_score_raw != 0:
             #     bm25_contexts.append(source.context)
         
-        if not no_context:
+        if not no_context and sources:
             distances = get_answer_distance_by_context(answer_no_context_text, dataset_name, all_contexts, embedding_model)
 
             if distances is None or len(distances) == 0:
@@ -728,7 +728,7 @@ def save_answer(request):
             semantic_score = 0
 
         #  calculate answer relevance score
-        if use_default_ars and not no_context:
+        if use_default_ars and not no_context and sources:
             best_distance_a = 0
             worst_distance_a = 0
 
@@ -765,7 +765,7 @@ def save_answer(request):
 
         # get relevance score based on semantic_score, keyword_score and rerank_score with weights determined by sensitivity analysis
         relevance_score_raw = round((semantic_score/100 * weight_x) + (keyword_score/100 * weight_y) + (rerank_score/100 * weight_z), 2)
-        relevance_score = round(min_max_normalization([relevance_score_raw], relevance_score_max, relevance_score_min, False)[0] * 100, 0)
+        relevance_score = round(min_max_normalization([relevance_score_raw], relevance_score_max, relevance_score_min, False)[0] * 100, 0) if sources and not no_context else 0
         if relevance_score < 0:
             relevance_score = 0
         elif relevance_score > 100:

@@ -306,6 +306,8 @@ function GPTHome(props:{
 				setSourcePapers([])
 				setSourceDetails([])
 				setSourcePages([])
+				setSourceStarts([])
+				setSourceStops([])
 				setSourceColorCodes([])
 				setSourceContexts([])
 				setFocusedPapers([])
@@ -474,46 +476,32 @@ function GPTHome(props:{
 			setRelatedQuery(false)
 				fetchContext(contextRequestBody, props.frontendSettings)
 					.then((data:any) => {
-						if (data.relevance_score === 0){
-							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
-							setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
-							setContext('None')
-							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, []])
-							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, []])
-							setSourceContexts((prevSourceContexts:any)=>[...prevSourceContexts, []])
-							setSourceColorCodes((prevSourceColorCodes:any)=>[...prevSourceColorCodes, []])
-							if (papers.length){
-								setSourcePages((prevSourcePages:any)=>[...prevSourcePages, []])
-							}else if (videos.length){
-								setSourceStarts((prevSourceStarts:any)=>[...prevSourceStarts, []])
-								setSourceStops((prevSourceStops:any)=>[...prevSourceStops, []])
-							}
-							setAnswerReceived(false)
-							setTranslatedAnswerReceived(false)
-						}else{
-							setQuestionRelevancescore((prevQuestionRelevancescore:any)=>[...prevQuestionRelevancescore, data.relevance_score])
-							setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
-							setContext(data.context)
-							setSourcePapers((prevSourcePapers:any)=>[...prevSourcePapers, data.sources.map((s:any)=>s.document)])
-							setSourceDetails((prevSourceDetails:any)=>[...prevSourceDetails, data.sources])
-							setSourceContexts((prevSourceContexts:any)=>[...prevSourceContexts, data.sources.map((s:any)=>s.context)])
-							setSourceColorCodes((prevSourceColorCodes:any)=>[...prevSourceColorCodes, data.sources.map((s:any)=> s.color_code)]);
-							if (data.sources[0].page !== ''){
-								setSourcePages((prevSourcePages:any)=>[...prevSourcePages, data.sources.map((s:any)=>s.page)])
-								setSelectedPage(data.sources[0].page)
-								const paperIndex:number = papers.findIndex((p:any)=>p.paper_title === data.sources[0].document)
-								setselectedPaperIdx(paperIndex)
-								setFileAttachmentType('highlighted_attachment')
-								setPapers([])
-							} else if (data.sources[0].start !== 0){
-								setSourceStarts((prevSourceStarts:any)=>[...prevSourceStarts, data.sources.map((s:any)=>s.start)])
-								setSourceStops((prevSourceStops:any)=>[...prevSourceStops, data.sources.map((s:any)=>s.stop)])
-								const videoIndex:number = videos.findIndex((v:any)=>v.video_title === data.sources[0].document)
-								setselectedPaperIdx(videoIndex)
-							}
-							setAnswerReceived(false)
-							setTranslatedAnswerReceived(false)
+						const sources = data.relevance_score === 0 ? [] : data.sources
+						const firstSource = sources[0]
+						const hasPages = firstSource && firstSource.page !== ''
+						const hasTimes = firstSource && !hasPages && firstSource.start !== 0
+						setQuestionRelevancescore((previous:any[])=>[...previous, data.relevance_score])
+						setQuestionRelevanceDetails((previous:any[]) => [...previous, { semantic: data.semantic_score, keyword: data.keyword_score, rerank: data.rerank_score }])
+						setContext(data.relevance_score === 0 || !data.context ? 'None' : data.context)
+						setSourcePapers((previous:any[])=>[...previous, sources.map((source:any)=>source.document)])
+						setSourceDetails((previous:any[][])=>[...previous, sources])
+						setSourceContexts((previous:any[])=>[...previous, sources.map((source:any)=>source.context)])
+						setSourceColorCodes((previous:any[])=>[...previous, sources.map((source:any)=>source.color_code)])
+						setSourcePages((previous:any[])=>[...previous, hasPages ? sources.map((source:any)=>source.page) : []])
+						setSourceStarts((previous:any[])=>[...previous, hasTimes ? sources.map((source:any)=>source.start) : []])
+						setSourceStops((previous:any[])=>[...previous, hasTimes ? sources.map((source:any)=>source.stop) : []])
+						if (hasPages){
+							setSelectedPage(firstSource.page)
+							const paperIndex:number = papers.findIndex((p:any)=>p.paper_title === firstSource.document)
+							setselectedPaperIdx(paperIndex)
+							setFileAttachmentType('highlighted_attachment')
+							setPapers([])
+						} else if (hasTimes){
+							const videoIndex:number = videos.findIndex((v:any)=>v.video_title === firstSource.document)
+							setselectedPaperIdx(videoIndex)
 						}
+						setAnswerReceived(false)
+						setTranslatedAnswerReceived(false)
 					})
 					.catch((error) => { console.error(error) })
 				}
@@ -960,6 +948,8 @@ function GPTHome(props:{
 		setSourcePapers([])
 		setSourceDetails([])
 		setSourcePages([])
+		setSourceStarts([])
+		setSourceStops([])
 		setSourceContexts([])
 		setSourceColorCodes([])
 		setFocusedSection(null)
