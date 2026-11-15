@@ -136,6 +136,14 @@ docker login ghcr.io
 	bash run_docker.sh
 	```
 
+	If an existing backend container reports `chroma: unrecognized subcommand 'bash'`, update the installation files to include the corrected Compose configuration, then recreate the backend from `installation/macOS/prebuilt_images`:
+
+	```
+	docker compose up -d --force-recreate backend
+	```
+
+	The Compose fix works with the existing prebuilt image; no image rebuild is required.
+
 	This script should take around 5-10 minutes to run.
 	While above script is running, it will open several pages in your default browser. 
 	You can see status of different components of MyGPT pipeline on these pages.

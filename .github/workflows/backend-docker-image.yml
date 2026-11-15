@@ -40,6 +40,11 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest-amd64
 
+      - name: Smoke test amd64 image
+        run: |
+          docker pull "$IMAGE:latest-amd64"
+          docker run --rm --network none "$IMAGE:latest-amd64" python3 manage.py check
+
   # Native arm64 runner avoids slow QEMU emulation of the Python dependency install.
   build-arm64:
     runs-on: ubuntu-24.04-arm
@@ -71,6 +76,11 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest-arm64
             ${{ env.IMAGE }}:arm64
+
+      - name: Smoke test arm64 image
+        run: |
+          docker pull "$IMAGE:latest-arm64"
+          docker run --rm --network none "$IMAGE:latest-arm64" python3 manage.py check
 
   manifest:
     needs: [build-amd64, build-arm64]

@@ -12,3 +12,5 @@ RUN apt-get install -y --no-install-recommends python3 python3-pip python3-venv 
 COPY requirements.txt /code/
 RUN python3 -m pip install --break-system-packages -r requirements.txt
 COPY . /code/
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000"]
