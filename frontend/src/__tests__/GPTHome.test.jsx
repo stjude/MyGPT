@@ -117,7 +117,7 @@ describe('GPTHome', () => {
         context: 'Video context', relevance_score: 75, semantic_score: 75, keyword_score: 0, rerank_score: 0,
         sources: [{ document: 'Video title', page: '', start: '00:01:00', stop: '00:02:00', context: 'Video context', color_code: 'green' }],
       })
-    renderGPTHome()
+    renderGPTHome({ selectedLlm: 'llama3:latest' })
     const input = screen.getByPlaceholderText(/Type your question here/i)
     const ask = (question) => {
       fireEvent.change(input, { target: { value: question } })
@@ -129,8 +129,8 @@ describe('GPTHome', () => {
     expect(await screen.findByText('Answer to First question')).toBeInTheDocument()
     expect(screen.getByText('64%')).toBeInTheDocument()
     expect(OllamaDirectGenerateStream).toHaveBeenCalledWith(
-      expect.anything(), 'First question', defaultSettings.system_prompt + 'None',
-      expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.any(Function), expect.anything()
+      'llama3:latest', 'First question', defaultSettings.system_prompt + 'None',
+      false, '', defaultSettings.temperature, defaultSettings.top_k, defaultSettings.top_p, expect.any(Function), null
     )
 
     ask('Second question')
