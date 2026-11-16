@@ -106,6 +106,31 @@ describe('GPTHome', () => {
     expect(screen.getByText(/Login to view document library/i)).toBeInTheDocument()
   })
 
+  it.each([
+    [true, 0, 42, '0%'],
+    [false, 31, 0, '0%'],
+    [true, 31, 42, '31%'],
+    [false, 31, 42, '42%'],
+  ])('shows the selected hallucination metric (equation=%s)', async (mode, equation, ml, expected) => {
+    GPTHomeAPI.saveAnswer.mockResolvedValue({
+      relevance_score: 78,
+      hallucination_index_by_equation: equation,
+      hallucination_index_by_ml: ml,
+    })
+    renderGPTHome({
+      selectedLlm: 'llama3:latest',
+      relevance_score_cutoff: { ...defaultSettings.relevance_score_cutoff, HI_by_equation: mode },
+    })
+    const input = screen.getByPlaceholderText(/Type your question here/i)
+    fireEvent.change(input, { target: { value: 'A question' } })
+    fireEvent.keyUp(input, { key: 'Enter', keyCode: 13 })
+
+    await waitFor(() => expect(GPTHomeAPI.saveAnswer).toHaveBeenCalledWith(
+      expect.objectContaining({ HI_by_equation: mode }), expect.anything()
+    ))
+    await waitFor(() => expect(screen.getByText('Hallucination')).toHaveTextContent(expected))
+  })
+
   it('answers an empty context and keeps later paper and video references aligned', async () => {
     GPTHomeAPI.fetchContext
       .mockResolvedValueOnce({ context: '', relevance_score: 64, semantic_score: 0, keyword_score: 0, rerank_score: 0, sources: [] })

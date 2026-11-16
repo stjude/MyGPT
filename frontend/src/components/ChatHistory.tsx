@@ -26,16 +26,6 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 	const [activeAnswer, setActiveAnswer] = useState(0)
 	const [selectedDataset, setSelectedDataset] = useState(props.dataset)
 	const [searchQuery, setSearchQuery] = useState('')
-	const [hallucionationIndex, setHallucionationIndex] = useState(0)
-
-	useEffect(() => {
-		if (questionDetails.answers && questionDetails.answers[activeAnswer]) {
-			const hi = questionDetails.answers[activeAnswer].hallucination_index_by_ml !== 0 ? questionDetails.answers[activeAnswer].hallucination_index_by_ml : questionDetails.answers[activeAnswer].hallucination_index_by_equation
-			setHallucionationIndex(hi)
-		} else {
-			setHallucionationIndex(0)
-		}
-	}, [questionDetails, activeAnswer])
 
 	useEffect(() => {
 		// fetch chat history from API
@@ -396,7 +386,7 @@ const ChatHistory = (props: ChatHistoryProps) =>{
 											keyword: questionDetails.answers[activeAnswer].keyword_score,
 											rerank: questionDetails.answers[activeAnswer].rerank_score,
 										}}
-										hallucination={hallucionationIndex}
+										hallucination={questionDetails.HI_by_equation ? questionDetails.answers[activeAnswer].hallucination_index_by_equation : questionDetails.answers[activeAnswer].hallucination_index_by_ml}
 										showMetrics
 										scoreColor={ConfidenceScoreColor}
 										references={historyReferences}

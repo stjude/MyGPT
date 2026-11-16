@@ -36,9 +36,12 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.assertNotIn(unanswered.question_text, [item['question'] for item in items])
 
 	def test_get_question_details_returns_answers_and_source_color(self):
+		self.dataset.HI_by_equation = True
+		self.dataset.save()
 		Answer.objects.create(
 			answer_text='A research assistant', question=self.question, model_type=self.model,
 			relevance_score=97.0, semantic_score=67.7, keyword_score=0.0, rerank_score=91.2,
+			hallucination_index_by_equation=-5,
 		)
 		Source.objects.create(
 			source_doc='paper.pdf', source_pointer=2, context='source text',
@@ -50,6 +53,7 @@ class ConversationAndAnswerAPITests(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		question_details = response.json()
+		self.assertTrue(question_details['HI_by_equation'])
 		self.assertEqual(question_details['semantic_score'], 66.0)
 		self.assertEqual(question_details['keyword_score'], 0.0)
 		self.assertEqual(question_details['rerank_score'], 98.0)
@@ -58,10 +62,14 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.assertEqual(question_details['answers'][0]['semantic_score'], 67.7)
 		self.assertEqual(question_details['answers'][0]['keyword_score'], 0.0)
 		self.assertEqual(question_details['answers'][0]['rerank_score'], 91.2)
+		self.assertEqual(question_details['answers'][0]['hallucination_index_by_equation'], 0)
 		self.assertEqual(question_details['sources'][0]['color_code'], 'green')
 		self.assertEqual(question_details['sources'][0]['answer_vector_score'], 0.8)
 		self.assertEqual(question_details['sources'][0]['answer_bm25_score'], 0.6)
 		self.assertEqual(question_details['sources'][0]['rerank_sentiment'], 'entailment')
+		self.dataset.HI_by_equation = False
+		self.dataset.save()
+		self.assertFalse(APIClient().get(reverse('get_question_details'), {'question_id': self.question.id}).json()['HI_by_equation'])
 
 	def test_get_context_in_direct_chat_creates_question_without_retrieval(self):
 		payload = {
@@ -217,3 +225,96 @@ class ConversationAndAnswerAPITests(TestCase):
 		self.assertEqual(len(response.json()['sources']), 1)
 		self.assertEqual(response.json()['relevance_score'], 94)
 		self.assertEqual(Answer.objects.latest('id').relevance_score, 94)
+
+	@patch('testdb.views.apis.add_embeddings_to_qna')
+	@patch('testdb.views.apis.predict_hallucination_index', return_value=42)
+	@patch('testdb.views.apis.rerank_answer_sources', return_value=[])
+	@patch('testdb.views.apis.get_answer_distance_by_context', return_value=[0])
+	def test_equation_hallucination_is_bounded_in_response_and_history(self, get_distance, rerank, predict, add_embeddings):
+		self.question.relevance_score = 100
+		self.question.save()
+		Source.objects.create(source_doc='paper.pdf', source_pointer=1, context='source text', rank=1, question=self.question)
+		payload = {
+			'question_text': self.question.question_text,
+			'answer_text': 'A research assistant',
+			'answer_no_context_text': 'A research assistant',
+			'model_type': self.model.model_name,
+			'dataset': self.dataset.dataset_name,
+			'no_context': False,
+			'answer_best_distance': 0,
+			'answer_worst_distance': 1,
+			'use_default_ars': False,
+			'QRS_p': 1,
+			'ARS_q': 2,
+			'use_default_hi': True,
+			'HI_by_equation': True,
+			'temperature': 0.7,
+			'top_k': 40,
+			'top_p': 0.9,
+		}
+
+		response = APIClient().post(reverse('save_answer'), payload, format='json')
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.json()['hallucination_index_by_equation'], 0)
+		self.assertEqual(response.json()['hallucination_index_by_ml'], 42)
+		self.assertEqual(Answer.objects.latest('id').hallucination_index_by_equation, 0)
+		history = APIClient().get(reverse('get_question_details'), {'question_id': self.question.id}).json()
+		self.assertEqual(history['answers'][0]['hallucination_index_by_equation'], 0)
+
+	@patch('testdb.views.apis.add_embeddings_to_qna')
+	@patch('testdb.views.apis.predict_hallucination_index', return_value=0)
+	@patch('testdb.views.apis.rerank_answer_sources', return_value=[('neutral', 0.5)])
+	@patch('testdb.views.apis.get_answer_distance_by_context')
+	@patch('testdb.views.apis.get_answer_distance_by_context_bm25', return_value=([], [1.54]))
+	def test_answer_scores_stay_bounded_with_custom_negative_weights(self, bm25, get_distance, rerank, predict, add_embeddings):
+		self.question.relevance_score = 47
+		self.question.save()
+		self.dataset.use_bm25 = True
+		self.dataset.coefficient_x_Asem = -1
+		self.dataset.coefficient_y_Akey = -5
+		self.dataset.coefficient_z_Arank = -3
+		self.dataset.save()
+		source = Source.objects.create(
+			source_doc='paper.pdf', source_pointer=1, context='source text',
+			rank=1, question=self.question,
+		)
+		payload = {
+			'question_text': self.question.question_text,
+			'answer_text': 'A research assistant',
+			'answer_no_context_text': 'A research assistant',
+			'model_type': self.model.model_name,
+			'dataset': self.dataset.dataset_name,
+			'no_context': False,
+			'answer_best_distance': 0.12,
+			'answer_worst_distance': 1.42,
+			'use_default_ars': False,
+			'QRS_p': 3,
+			'ARS_q': 0,
+			'use_default_hi': False,
+			'temperature': 0.7,
+			'top_k': 40,
+			'top_p': 0.9,
+		}
+		for distance, expected_vector_score, expected_relevance in [
+			(101.806, 0, 60),
+			(0, 1, 50),
+			(0.77, 0.5, 55),
+		]:
+			with self.subTest(distance=distance):
+				get_distance.return_value = [distance]
+				response = APIClient().post(reverse('save_answer'), payload, format='json')
+				self.assertEqual(response.status_code, 200)
+				data = response.json()
+				self.assertEqual(data['semantic_score'], expected_vector_score * 100)
+				self.assertEqual(data['relevance_score'], expected_relevance)
+				self.assertEqual(data['sources'][0]['answer_vector_score'], expected_vector_score)
+				source.refresh_from_db()
+				self.assertEqual(source.vector_distance_answer_raw, distance)
+				self.assertEqual(source.vector_score_answer, expected_vector_score)
+				answer = Answer.objects.latest('id')
+				self.assertEqual(answer.semantic_score, expected_vector_score * 100)
+				self.assertEqual(answer.relevance_score, expected_relevance)
+				self.assertEqual(predict.call_args.args[0], [expected_vector_score])
+				history = APIClient().get(reverse('get_question_details'), {'question_id': self.question.id}).json()
+				self.assertEqual(history['sources'][0]['answer_vector_score'], expected_vector_score)
+				self.assertEqual(history['answers'][-1]['semantic_score'], expected_vector_score * 100)

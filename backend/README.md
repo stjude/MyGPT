@@ -67,6 +67,28 @@ With the backend running, browse the API root and generated documentation:
 
 The API includes dataset and document management, conversations and answers, model and embedding configuration, secure media, authentication, and Ollama generation/chat/model-management endpoints. Many endpoints expect JSON POST bodies; consult the OpenAPI schema for request and response fields.
 
+For document chat, `save_answer` returns both equation-based and ML-based
+hallucination indices. The live UI displays the mode selected when the answer
+was submitted. `get_question_details` also returns the library's current
+`HI_by_equation` setting, which chat history uses to choose between the saved
+indices. The mode is not stored per answer, so changing the library setting
+changes which metric is displayed for existing history.
+
+### Relevance score ranges
+
+Min-max normalized source scores are bounded to 0-1 before weighting or ML
+prediction; answer semantic and keyword percentages are therefore bounded to
+0-100. Raw distances and BM25 scores are retained separately. Values outside
+the configured calibration range saturate at the nearest endpoint rather than
+extrapolating into negative or oversized percentages. Negative composite
+weights are still supported and apply to these bounded components. Changing
+weights does not change embedding distances or their calibration.
+
+Existing saved answers are not recalculated by this change. Regenerate an
+answer to replace its source scores and produce new answer metrics. If many
+scores saturate, check that the answer distance cutoffs match the library's
+embedding model and distance metric.
+
 ## Tests
 
 The backend tests live in `testdb/test_apis_data.py`, `testdb/test_apis_conversations.py`, and `testdb/test_apis_integrations.py`. They use Django `TestCase` and mock external services such as Ollama, YouTube, and embedding utilities.

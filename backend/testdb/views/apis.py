@@ -592,7 +592,7 @@ def get_question_details(request):
                 'semantic_score': answer.semantic_score,
                 'keyword_score': answer.keyword_score,
                 'rerank_score': answer.rerank_score,
-                'hallucination_index_by_equation': answer.hallucination_index_by_equation,
+                'hallucination_index_by_equation': max(0, min(100, answer.hallucination_index_by_equation)),
                 'hallucination_index_by_ml': answer.hallucination_index_by_ml,
                 'answer_no_context': answer.answer_no_context_text,
                 'rating': answer.rating,
@@ -618,6 +618,7 @@ def get_question_details(request):
             'question_type': question.question_type,
             'keywords': question.keywords,
             'llm': question.model_type.model_name,
+            'HI_by_equation': question.question_dataset.HI_by_equation,
             'answers': answers_json,
             'sources': sources_json
         }
@@ -792,6 +793,8 @@ def save_answer(request):
             hallucination_index_by_equation_raw = 1 - ((QRS_p * question_relevance_fraction)/ (QRS_p + ARS_q)) - ((ARS_q * answer_relevance_fraction)/ (QRS_p + ARS_q))
             hallucination_index_by_equation = round((hallucination_index_by_equation_raw - minHI)/(maxHI - minHI) * 100, 0)
 
+        hallucination_index_by_equation = max(0, min(100, hallucination_index_by_equation))
+
         # create new sources array with vector_distances and vector_scores
         new_sources = []
         for rank in sources_ranks:
@@ -838,7 +841,7 @@ def save_answer(request):
             keyword_score=keyword_score if keyword_score <= 100 else 100,
             rerank_score=rerank_score if rerank_score <= 100 else 100,
             relevance_score=relevance_score if question_relevance_score != 0 else 0, 
-            hallucination_index_by_equation=hallucination_index_by_equation if hallucination_index_by_equation < 100 else 100,
+            hallucination_index_by_equation=hallucination_index_by_equation,
             hallucination_index_by_ml=hallucination_index_by_ml if hallucination_index_by_ml < 100 else 100,
             ars_lower_range=best_distance_a,
             ars_upper_range=worst_distance_a,
@@ -851,20 +854,13 @@ def save_answer(request):
         # add embeddings to answer
         if not no_context:
             add_embeddings_to_qna(answer_text, 'answer', embedding_model)
-            hallucination_index_by_equation_final = 0
-            if hallucination_index_by_equation < 0:
-                hallucination_index_by_equation_final = 0
-            elif hallucination_index_by_equation > 100:
-                hallucination_index_by_equation_final = 100
-            else:
-                hallucination_index_by_equation_final = hallucination_index_by_equation
             return Response({
                 'saved':True, 
                 'mean_distance_a': mean_distance_a,
                 'relevance_score': relevance_score if question_relevance_score != 0 else 0,
                 'semantic_score': semantic_score,
                 'keyword_score': keyword_score,
-                'hallucination_index_by_equation': hallucination_index_by_equation_final,
+                'hallucination_index_by_equation': hallucination_index_by_equation,
                 'hallucination_index_by_ml': hallucination_index_by_ml,
                 'sources': new_sources_json,
             }, content_type="application/json")
