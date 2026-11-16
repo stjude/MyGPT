@@ -779,8 +779,8 @@ def save_answer(request):
         else:
             QRS_p = QRS_p_r
             ARS_q = ARS_q_r
-        maxHI = 0.8
-        minHI = 0.2
+        maxHI = 0.95
+        minHI = 0.05
 
         if(question_relevance_score == 0):
             hallucination_index_by_equation_raw = 1
