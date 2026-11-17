@@ -1,3 +1,5 @@
+import { openAILlms } from './DefaultState'
+
 // Helper: resolve the Authorization header value from current auth state
 export const getAuthHeader = (user: any, djangoLogin: any): string => {
 	if (user && djangoLogin) {
@@ -124,17 +126,27 @@ export const fetchAndRegisterOllamaModels = async (
 	djangoLogin: any,
 	signal?: AbortSignal
 ): Promise<{ llms: string[]; llm: string }> => {
-	const tagsResponse = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
+	let models: any[]
+	try {
+		const tagsResponse = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
 		method: 'POST',
 		signal,
-	})
-	const data = await tagsResponse.json()
+		})
+		if (!tagsResponse.ok) throw new Error('Unable to list Ollama models')
+		const data = await tagsResponse.json()
+		models = data.models
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') throw error
+		console.warn('Unable to list Ollama models; OpenAI models remain available', error)
+		return { llms: [...openAILlms], llm: openAILlms[0] }
+	}
 
-	const llms: string[] = data.models
+	const llms: string[] = [...new Set([...openAILlms, ...models
 		.filter((model: any) => model.quantization_level !== 'F16')
 		.map((model: any) => model.name)
+	])]
 
-	const llms_object = data.models.map((model: any) => ({
+	const llms_object = models.map((model: any) => ({
 		name: model.name,
 		size: (model.size * 1e-9).toFixed(2),
 	}))

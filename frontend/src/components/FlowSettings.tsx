@@ -17,6 +17,7 @@ import '@xyflow/react/dist/style.css';
 import { InputNode, OutputNode, LLMNode, PromptNode, RelevanceScoreNode, SaveNode } from './Flow/StageTwo';
 import { ReactNode } from 'react';
 import { updateDatasetRequest, getDatasetDetailsRequest } from '../utils/SettingsAPI';
+import defaultSettings from '../utils/DefaultState';
 
 type FlowNode = Node<{ title: string | ReactNode; libraryName?: string; languageOfDocument?: string }, string>;
 
@@ -169,7 +170,7 @@ const FlowSettings = (props: {
     const [loadingLibrarySettings, setLoadingLibrarySettings] = useState(false)
     const [selectedLibrary, setSelectedLibrary] = useState(props.currentSettings?.selectedDataset || 'None')
     const [chatSettings, setChatSettings] = useState({
-        selectedLlm: props.currentSettings?.selectedLlm || 'gpt-oss:20b',
+        selectedLlm: props.currentSettings?.selectedLlm || defaultSettings.defaultLlm,
         systemPrompt: props.currentSettings?.system_prompt || '',
         maximum_chunks_count: props.currentSettings?.maximum_chunks_count || '15',
         no_chunk_cutoff: props.currentSettings?.no_chunk_cutoff || false,
@@ -375,7 +376,7 @@ const FlowSettings = (props: {
 
         props.settingsCallback({ ...props.currentSettings, ...fallbackDefaults })
         setChatSettings({
-            selectedLlm: fallbackDefaults?.selectedLlm || 'gpt-oss:20b',
+            selectedLlm: fallbackDefaults?.selectedLlm || defaultSettings.defaultLlm,
             systemPrompt: fallbackDefaults?.system_prompt || '',
             maximum_chunks_count: fallbackDefaults?.maximum_chunks_count || '15',
             no_chunk_cutoff: fallbackDefaults?.no_chunk_cutoff || false,

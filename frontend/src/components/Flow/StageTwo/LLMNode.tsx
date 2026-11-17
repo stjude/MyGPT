@@ -48,7 +48,7 @@ const LLMNode = ({ data }: any) => {
         }
 
         return {
-            selectedLlm: data.currentSettings.defaultLlm || 'llama3:latest'
+            selectedLlm: data.currentSettings.defaultLlm || defaultSettings.defaultLlm
         }
     }
 

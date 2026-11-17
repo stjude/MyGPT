@@ -168,6 +168,35 @@ describe('GPTHome', () => {
     expect(screen.getByText('Page 2 of "Paper title"')).toBeInTheDocument()
   })
 
+  it('generates and saves a library answer using the OpenAI default', async () => {
+    GPTHomeAPI.fetchAndRegisterOllamaModels.mockResolvedValue(['gpt-6-luna'])
+    renderGPTHome({ selectedLlm: 'gpt-6-luna' })
+    const input = screen.getByPlaceholderText(/Type your question here/i)
+    fireEvent.change(input, { target: { value: 'OpenAI question' } })
+    fireEvent.keyUp(input, { key: 'Enter', keyCode: 13 })
+
+    await waitFor(() => expect(GPTHomeAPI.saveAnswer).toHaveBeenCalledWith(
+      expect.objectContaining({ model_type: 'gpt-6-luna', answer_text: 'Answer to OpenAI question' }),
+      expect.anything(),
+    ))
+    expect(await screen.findByText('Answer to OpenAI question')).toBeInTheDocument()
+    expect(OllamaDirectGenerateStream.mock.calls.every(call => call[0] === 'gpt-6-luna')).toBe(true)
+  })
+
+  it('shows generation errors without saving them as answers', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    GPTHomeAPI.fetchAndRegisterOllamaModels.mockResolvedValue(['gpt-6-luna'])
+    OllamaDirectGenerateStream.mockRejectedValue(new Error('Configure OPENAI_API_KEY'))
+    renderGPTHome({ selectedLlm: 'gpt-6-luna' })
+    const input = screen.getByPlaceholderText(/Type your question here/i)
+    fireEvent.change(input, { target: { value: 'Failing question' } })
+    fireEvent.keyUp(input, { key: 'Enter', keyCode: 13 })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Configure OPENAI_API_KEY')
+    expect(GPTHomeAPI.saveAnswer).not.toHaveBeenCalled()
+    console.error.mockRestore()
+  })
+
   it('loads desktop models through Electron instead of fetching Ollama from the renderer', async () => {
     const { fetchAndRegisterOllamaModels } = await vi.importActual('../utils/GPTHomeAPI')
     const electronAPI = window.electronAPI
@@ -185,7 +214,7 @@ describe('GPTHome', () => {
     globalThis.fetch = vi.fn()
 
     try {
-      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['llama3:latest'])
+      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['gpt-6-luna', 'llama3:latest'])
       expect(window.electronAPI.getOllamaStatus).toHaveBeenCalledOnce()
       expect(globalThis.fetch).not.toHaveBeenCalled()
     } finally {
@@ -208,7 +237,7 @@ describe('GPTHome', () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Backend unavailable'))
 
     try {
-      expect(await fetchAndRegisterOllamaModels({ django_login: false })).toEqual(['llama3:latest'])
+      expect(await fetchAndRegisterOllamaModels({ django_login: false })).toEqual(['gpt-6-luna', 'llama3:latest'])
     } finally {
       window.electronAPI = electronAPI
       globalThis.fetch = fetch

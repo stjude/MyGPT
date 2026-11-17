@@ -12,6 +12,7 @@ import {
 import MCPClient from './MCPClient'
 import FlowSettings from './FlowSettings'
 import DeveloperAPISettings from './DeveloperAPISettings'
+import { openAILlms } from '../utils/DefaultState'
 
 const Settings = (props: {
 	closeSettings: any,
@@ -169,9 +170,10 @@ const Settings = (props: {
 			const data = await response.json()
 
 			// set models
-			const llms = data.models
+			const llms = [...new Set([...openAILlms, ...data.models
 				.filter((model: any) => model.details.quantization_level !== 'F16')
 				.map((model: any) => model.name)
+			])]
 			const llm = llms[0]
 			setLlms(llms)
 			setLlm(llm)
@@ -212,9 +214,9 @@ const Settings = (props: {
 		}
 		postData().catch(error => {
 			console.warn('Unable to refresh Ollama models:', error)
-			setLlms([])
-			setLlm('')
-			props.settingsCallback({ ...currentSettings, llms: [], selectedLlm: '' })
+			setLlms([...openAILlms])
+			setLlm(openAILlms[0])
+			props.settingsCallback({ ...currentSettings, llms: [...openAILlms], selectedLlm: openAILlms[0] })
 		})
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [props.user, props.djangoLogin, props.currentSettings.runtimeRevision])

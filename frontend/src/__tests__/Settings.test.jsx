@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import Settings from '../components/Settings'
 import { DeveloperAPISettings } from '../components/DeveloperAPISettings'
 import defaultSettings from '../utils/DefaultState'
@@ -64,6 +64,14 @@ describe('Settings', () => {
   it('renders Settings header', () => {
     render(<Settings {...baseProps} />)
     expect(screen.getByText('Settings')).toBeInTheDocument()
+  })
+
+  it('keeps the OpenAI default when no Ollama models are installed', async () => {
+    const settingsCallback = vi.fn()
+    render(<Settings {...baseProps} currentSettings={{ ...defaultSettings, selectedLlm: 'gpt-6-luna' }} settingsCallback={settingsCallback} />)
+    await waitFor(() => expect(settingsCallback).toHaveBeenCalledWith(expect.objectContaining({
+      llms: ['gpt-6-luna'], selectedLlm: 'gpt-6-luna',
+    })))
   })
 
   it('renders expected panel tabs', () => {

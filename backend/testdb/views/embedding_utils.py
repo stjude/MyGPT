@@ -7,24 +7,31 @@ import pandas as pd
 import chromadb
 from chromadb.utils import embedding_functions
 from django.utils.timezone import make_aware
+from django.db import transaction
 import datetime
 from tqdm import tqdm
 
 from ..models import EmbeddingModel, Question, Answer, chunks, Dataset, Papers, Videos
-from .embedding_functions import HuggingFaceEmbeddingFunction, OllamaEmbeddingFunction
+from .embedding_functions import (
+    HuggingFaceEmbeddingFunction, OllamaEmbeddingFunction, OpenAIEmbeddingFunction,
+    OPENAI_EMBEDDING_MODELS,
+)
 
 
+@transaction.atomic
 def get_embedding_model_ef(embedding_model_request, add_distances=False):
     """Get the embedding function for the specified model"""
     embedding_model_record, add_embedding_model_distances = EmbeddingModel.objects.get_or_create(
         model_name=embedding_model_request,
-        defaults={'model_source': 'sentence-transformer'},
+        defaults={'model_source': 'openai' if embedding_model_request in OPENAI_EMBEDDING_MODELS else 'sentence-transformer'},
     )
     embedding_model = embedding_model_record.model_name
     embedding_model_source = embedding_model_record.model_source
         
     # use multi-qa-MiniLM-L6-cos-v1 embedding function
-    if embedding_model == 'all-MiniLM-L6-v2':
+    if embedding_model_source == 'openai' or embedding_model in OPENAI_EMBEDDING_MODELS:
+        embedding_model_ef = OpenAIEmbeddingFunction(model_name=embedding_model)
+    elif embedding_model == 'all-MiniLM-L6-v2':
         embedding_model_ef = embedding_functions.DefaultEmbeddingFunction()
     elif embedding_model_source == 'ollama':
         embedding_model_ef = OllamaEmbeddingFunction(url=os.environ.get('OLLAMA_SERVER') + "/api/embeddings", model_name=embedding_model.split(':')[0]) 

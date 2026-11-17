@@ -1,7 +1,77 @@
 # imports for embedding functions
 from typing import cast, Union
+import os
+import math
 import httpx
+import numpy as np
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+from chromadb.utils.embedding_functions import register_embedding_function
+from .openai_client import openai_tls_verification, openai_request_errors
+
+OPENAI_EMBEDDING_MODELS = (
+    'text-embedding-3-small',
+    'text-embedding-3-large',
+    'text-embedding-ada-002',
+)
+
+
+@register_embedding_function
+class OpenAIEmbeddingFunction(EmbeddingFunction[Documents]):
+    def __init__(self, model_name: str = 'text-embedding-3-small') -> None:
+        api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+        if not api_key:
+            raise ValueError('OPENAI_API_KEY must be configured in .env_backend to use OpenAI embeddings.')
+        self._model_name = model_name
+        self._session = httpx.Client(
+            base_url='https://api.openai.com/v1/',
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=60.0,
+            verify=openai_tls_verification(),
+        )
+
+    @staticmethod
+    def name() -> str:
+        return 'mygpt-openai'
+
+    def get_config(self) -> dict[str, str]:
+        return {'model_name': self._model_name}
+
+    @staticmethod
+    def build_from_config(config: dict[str, str]) -> 'OpenAIEmbeddingFunction':
+        return OpenAIEmbeddingFunction(model_name=config['model_name'])
+
+    def __call__(self, input: Documents) -> Embeddings:
+        if not input or any(not isinstance(text, str) or not text.strip() for text in input):
+            raise ValueError('OpenAI embeddings require non-empty input text.')
+        vectors: Embeddings = []
+        for offset in range(0, len(input), 100):
+            batch = input[offset:offset + 100]
+            with openai_request_errors():
+                response = self._session.post(
+                    'embeddings',
+                    json={'model': self._model_name, 'input': batch, 'encoding_format': 'float'},
+                )
+            response.raise_for_status()
+            payload = response.json()
+            data = payload.get('data') if isinstance(payload, dict) else None
+            if not isinstance(data, list) or len(data) != len(batch):
+                raise ValueError('OpenAI returned an unexpected number of embeddings.')
+            if any(not isinstance(item, dict) or type(item.get('index')) is not int for item in data):
+                raise ValueError('OpenAI returned invalid embedding indices.')
+            ordered = sorted(data, key=lambda item: item['index'])
+            if [item['index'] for item in ordered] != list(range(len(batch))):
+                raise ValueError('OpenAI returned invalid embedding indices.')
+            for item in ordered:
+                embedding = item.get('embedding')
+                if (
+                    not isinstance(embedding, list) or not embedding
+                    or any(type(value) not in (int, float) or not math.isfinite(value) for value in embedding)
+                    or (vectors and len(embedding) != len(vectors[0]))
+                ):
+                    raise ValueError('OpenAI returned an invalid embedding vector.')
+                vectors.append(np.array(embedding, dtype=np.float32))
+        return vectors
+
 
 class HuggingFaceEmbeddingFunction(EmbeddingFunction[Documents]):
     """

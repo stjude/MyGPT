@@ -14,6 +14,7 @@ import { SJRayDirectGenerateStream } from '../utils/SJRayGenerate'
 import { fetchAndRegisterOllamaModels, fetchDatasetDetails, fetchDocuments, fetchSections, addDemoLibraryRequest, fetchContext, saveAnswer, fetchProtectedMediaBlobUrl } from '../utils/GPTHomeAPI'
 import FocusOnDocumentSelect from './DocumentFocusSelect'
 import Feedback from './Feedback'
+import { isOpenAIModel } from '../utils/DefaultState'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
@@ -42,6 +43,12 @@ function GPTHome(props:{
 	const [thinkAllowed, setThinkAllowed] = useState<any>(false)
 	const [thought, setThought] = useState<any>('')
 	const [answerReceived, setAnswerReceived] = useState<any>(false)
+	const [generationError, setGenerationError] = useState('')
+	const reportGenerationError = (error: unknown) => {
+		console.error('Model generation failed', error)
+		setGenerationError(error instanceof Error ? error.message : 'Model generation failed')
+	}
+	useEffect(() => { setGenerationError('') }, [query])
 	const [minimizedThinking, setMinimizedThinking] = useState(false)
 	const [nullAnswer, setNullAnswer] = useState<any>('')
 	const [nullThought, setNullThought] = useState<any>('')
@@ -116,6 +123,8 @@ function GPTHome(props:{
 	const [mcpOllamaTools, setMcpOllamaTools] = useState<any[]>([])
 	const [mcpResponse, setMcpResponse] = useState<any>('')
 	const llmsWithToolSupport = ['llama3.1', 'llama3.2', 'llama3.3', 'gpt-oss', 'gemma4']
+	const openAISelected = isOpenAIModel(props.currentSettings.selectedLlm)
+	const supportsTools = openAISelected || llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0])
 	const llmswithThinkStepSupport = ['gpt-oss', 'qwen3', 'gemma4']
 	const chatModeOptions = [
 		{ value: 'chat_with_documents', label: 'Chat with Documents' },
@@ -440,6 +449,7 @@ function GPTHome(props:{
 		const postDataWithTools = async () => {
 			const toolsBody:any = {
 				'model': props.currentSettings.selectedLlm,
+				'new_conversation': query.length === 1,
 				'messages': [
 					{
 						'role': 'system',
@@ -509,8 +519,8 @@ function GPTHome(props:{
 			if(query.length && query.length !== answers.length){
 				// setSelectedPage(0)
 				// setselectedPaperIdx(0)
-				if (llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0]) && mcpOllamaTools.length > 0){
-					postDataWithTools()
+				if (supportsTools && mcpOllamaTools.length > 0){
+					postDataWithTools().catch(reportGenerationError)
 				}
 				else {
 					if (DatasetLanguage !== 'english' && translatedQueryReceived){
@@ -536,14 +546,14 @@ function GPTHome(props:{
 		const systemPrompt = props.currentSettings.system_prompt + context
 		
 		let addToolsPromt: boolean = false
-		if (llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0]) && mcpOllamaTools.length > 0){
+		if (supportsTools && mcpOllamaTools.length > 0){
 			addToolsPromt = true
 		}
 		
 		if(context.length > 1 && question.length > 1){
 			const postData = async () => {
 				let answerReceived:any = null
-				if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+				if (openAISelected || props.currentSettings.LLM_server_API_specs === 'ollama' || props.currentSettings.LLM_server_API_specs === 'openai'){
 					answerReceived = await OllamaDirectGenerateStream(
 						props.currentSettings.selectedLlm, 
 						question, systemPrompt, addToolsPromt, mcpResponse,
@@ -557,12 +567,10 @@ function GPTHome(props:{
 						props.currentSettings.temperature, props.currentSettings.top_k, props.currentSettings.top_p, 
 						setAnswer
 					)
-				} else if (props.currentSettings.LLM_server_API_specs === 'openai'){
-					
 				}
 				setAnswerReceived(answerReceived)
 			}
-			postData()
+			postData().catch(reportGenerationError)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, context, props.currentSettings.selectedLlm])
@@ -577,7 +585,7 @@ function GPTHome(props:{
 
 			const postData = async () => {
 				let nullAnswerReceived:any = null
-				if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+				if (openAISelected || props.currentSettings.LLM_server_API_specs === 'ollama' || props.currentSettings.LLM_server_API_specs === 'openai'){
 					nullAnswerReceived = await OllamaDirectGenerateStream(
 						props.currentSettings.selectedLlm, 
 						question, systemPrompt, false, '',
@@ -594,7 +602,7 @@ function GPTHome(props:{
 				}
 				setNullAnswerReceived(nullAnswerReceived)
 			}
-			postData()
+			postData().catch(reportGenerationError)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, context, props.currentSettings.selectedLlm, nullAnswer])
@@ -607,14 +615,14 @@ function GPTHome(props:{
 			return
 		}
 		const postData = async () => {
-			if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+			if (openAISelected || props.currentSettings.LLM_server_API_specs === 'ollama'){
 				let language_from_full = 'English'
 				let language_from = 'en'
 				let language_to_full = DatasetLanguage !== '-' ? supportedDatasetLanguages[DatasetLanguage].language_to_full : ''
 				let language_to = DatasetLanguage !== '-' ? supportedDatasetLanguages[DatasetLanguage].language_to : ''
 				let systemPrompt = `You are a professional ${language_from_full} (${language_from}) to ${language_to_full} (${language_to}) translator. Your goal is to accurately convey the meaning and nuances of the original ${language_from_full} text while adhering to ${language_to_full} grammar, vocabulary, and cultural sensitivities. Produce only the ${language_to_full} translation, without any additional explanations or commentary. Please translate the following ${language_from_full} text into ${language_to_full}: `
 				const translatedQueryReceived = await OllamaDirectGenerateNoStream(
-					'translategemma:latest', 
+					openAISelected ? props.currentSettings.selectedLlm : 'translategemma:latest',
 					query[query.length-1] && query[query.length-1].question ? query[query.length-1].question.replaceAll('"',"'") : '',
 					systemPrompt,
 					false,
@@ -625,7 +633,7 @@ function GPTHome(props:{
 				setTranslatedQueryReceived(translatedQueryReceived)
 			}
 		}
-		postData()
+		postData().catch(reportGenerationError)
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, DatasetLanguage])
 
@@ -638,14 +646,14 @@ function GPTHome(props:{
 			return
 		}
 		const postData = async () => {
-			if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+			if (openAISelected || props.currentSettings.LLM_server_API_specs === 'ollama'){
 				let language_from_full = 'English'
 				let language_from = 'en'
 				let language_to_full = supportedDatasetLanguages[DatasetLanguage].language_to_full
 				let language_to = supportedDatasetLanguages[DatasetLanguage].language_to
 				let systemPrompt = `You are a professional ${language_from_full} (${language_from}) to ${language_to_full} (${language_to}) translator. Your goal is to accurately convey the meaning and nuances of the original ${language_from_full} text while adhering to ${language_to_full} grammar, vocabulary, and cultural sensitivities. Produce only the ${language_to_full} translation, without any additional explanations or commentary. Please translate the following ${language_from_full} text into ${language_to_full}: `
 				const translatedAnswerReceived = await OllamaDirectGenerateNoStream(
-					'translategemma:latest', 
+					openAISelected ? props.currentSettings.selectedLlm : 'translategemma:latest',
 					answer,
 					systemPrompt,
 					false,
@@ -656,7 +664,7 @@ function GPTHome(props:{
 				setTranslatedAnswerReceived(translatedAnswerReceived)
 			}
 		}
-		postData()
+		postData().catch(reportGenerationError)
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[answer, answerReceived, DatasetLanguage])
 
@@ -755,7 +763,7 @@ function GPTHome(props:{
 			'new_conversation': query.length === 1 ? true : false,
 		}
 
-		if (llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0]) && props.currentSettings.MCPTools && props.currentSettings.MCPTools.length){
+		if (supportsTools && props.currentSettings.MCPTools && props.currentSettings.MCPTools.length){
 			body_['tools'] = mcpOllamaTools
 			body_['stream'] = false
 		}
@@ -770,10 +778,10 @@ function GPTHome(props:{
 				let answerReceived = data.answerReceived
 				setAnswerReceived(answerReceived)
 			}
-			postData()
+			postData().catch(reportGenerationError)
 		}
 
-		else if (messages.length > 0 && answer === '' && !answerReceived && llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0]) && mcpOllamaTools.length){
+		else if (messages.length > 0 && answer === '' && !answerReceived && supportsTools && mcpOllamaTools.length){
 			
 			const postDataWithTools = async () => {
 				// fetch using async await
@@ -782,7 +790,7 @@ function GPTHome(props:{
 				const data = await OllamaChatStreamWithToolSupport(body, setAnswer, props.currentSettings.MCPTools, props.currentSettings.MCPClient, stream, returnToolResponse, isThinkStepSupported ? setThought : null)
 				setAnswerReceived(data.answerReceived)
 			}
-			postDataWithTools()
+			postDataWithTools().catch(reportGenerationError)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, props.currentSettings.selectedLlm, answerWithoutContext])
@@ -1045,6 +1053,7 @@ function GPTHome(props:{
 
 	return (
 		<div className='p-4 pt-28 pb-3 bg-gray-200 dark:bg-neutral-800 max-w-[2000px] w-full mx-auto flex-1 min-h-0 flex flex-col overflow-hidden'>
+			{generationError && <div role='alert' className='p-3 mb-2 rounded bg-red-100 text-red-800'>{generationError}</div>}
 			<div className='flex-1 min-h-0 flex w-full items-stretch overflow-hidden'>
 			{/* Panel for Chat */}
 			{!answerWithoutContext && panelCollapsed.left ? (
@@ -1241,7 +1250,7 @@ function GPTHome(props:{
 					</div>
 					 : null } */}
 				{/* show MCP tool name in tags if llm is llama3.1 */}
-				{ llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0]) && props.currentSettings.MCPTools && props.currentSettings.MCPTools.length > 0 ?
+				{ supportsTools && props.currentSettings.MCPTools && props.currentSettings.MCPTools.length > 0 ?
 					<div className='flex flex-row flex-wrap'>
 						<div className='text-sm text-nav dark:text-nav-dark my-auto mx-1'>MCP Tools:</div>
 						{props.currentSettings.MCPTools.map((tool:any, idx:any) => (
@@ -1525,7 +1534,7 @@ function GPTHome(props:{
 										<div className='text-white text-sm py-1'>{props.currentSettings.selectedLlm + ' + MyGPT'}</div>
 									) : <div className='text-white dark:text-nav-dark text-sm py-2'>{props.currentSettings.selectedLlm}</div>}
 									answer=''
-									isGenerating
+									isGenerating={!generationError}
 									showMetrics={!answerWithoutContext}
 									scoreColor={ConfidenceScoreColor}
 									references={questionRelevancescore[query.length-1] > 0 ? getAnswerReferences(query.length-i-1) : []}
@@ -1548,7 +1557,7 @@ function GPTHome(props:{
 									)}
 									<div className='text-white whitespace-pre-wrap answer-div'>
 										<MathMarkdown>
-											{answer.length ? answer: 'Generating answer...'}
+											{generationError || (answer.length ? answer: 'Generating answer...')}
 										</MathMarkdown>
 									</div>
 									{

@@ -1,3 +1,13 @@
+export const openAIEmbeddingModels = [
+	'text-embedding-3-small',
+	'text-embedding-3-large',
+	'text-embedding-ada-002',
+]
+
+export const openAILlms = ['gpt-6-luna']
+export const isOpenAIModel = (model: string) => openAILlms.includes(model) || model.startsWith('openai:')
+const defaultLlm = import.meta.env.VITE_DEFAULT_LLM || 'gpt-6-luna'
+
 const defaultSettings = {
 	showSettings: false,
 	showUpload: false,
@@ -16,9 +26,9 @@ const defaultSettings = {
 		{key: 'developer_api', text: 'Developer / API'},
 	],
 	selectedPanel: 'datasets',
-	llms: [import.meta.env.VITE_DEFAULT_LLM || 'llama3:latest'],
-    defaultLlm: import.meta.env.VITE_DEFAULT_LLM || 'llama3:latest',
-	selectedLlm: import.meta.env.VITE_DEFAULT_LLM || 'llama3:latest',
+	llms: [...new Set([defaultLlm, ...openAILlms])],
+    defaultLlm,
+	selectedLlm: defaultLlm,
     datasets: ['None'],
 	defaultDataset: 'None',
     selectedDataset: 'None',
@@ -28,6 +38,7 @@ const defaultSettings = {
     defaultEmbeddingModel: 'nomic-embed-text:latest',
 	selectedEmbeddingModel: 'nomic-embed-text:latest',
 	embedding_models: [
+		...openAIEmbeddingModels,
 		'multi-qa-MiniLM-L6-cos-v1',
 		'all-MiniLM-L6-v2',
 		'all-MiniLM-L12-v2',
@@ -104,4 +115,3 @@ const defaultSettings = {
 
   export default defaultSettings;
 	
-

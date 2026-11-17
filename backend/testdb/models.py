@@ -33,6 +33,7 @@ embedding_model_source = (
 	('ollama', 'ollama'),
 	('sentence-transformer', 'sentence-transformer'),
 	('huggingface', 'huggingface'),
+	('openai', 'openai'),
 )
 
 chunking_methods_choice = (

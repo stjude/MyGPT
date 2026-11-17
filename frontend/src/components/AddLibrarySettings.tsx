@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { DropdownOptions } from './DropDownMenu'
-import defaultSettings from '../utils/DefaultState'
+import defaultSettings, { openAIEmbeddingModels } from '../utils/DefaultState'
 
 const AddLibrarySettings = (props: {
 	currentSettings: any,
@@ -12,6 +12,10 @@ const AddLibrarySettings = (props: {
 	const stateKey = 'upUploadNodeState';
 	const emptyUploadDocs:any = Array.from(Array(40).keys()).map((x: any) => { return { title: '', file: null } })
 	const safeCurrentSettings = props.currentSettings || {}
+	const embeddingModels = [...new Set([
+		...(safeCurrentSettings.embedding_models || defaultSettings.embedding_models),
+		...openAIEmbeddingModels,
+	])]
 	const getInitialUploadNodeData = () => {
 		if (safeCurrentSettings.libraryName || safeCurrentSettings.docs || safeCurrentSettings.languageOfDocs) {
 			           return {
@@ -573,7 +577,7 @@ const AddLibrarySettings = (props: {
 						<div className='text-nav dark:text-nav-dark w-48 p-1'>Embedding Model*</div>
 						<DropdownOptions
 							width={'280px'}
-							optionsList={props.currentSettings?.embedding_models || defaultSettings.embedding_models}
+							optionsList={embeddingModels}
 							defaultOption={currentSettings.selectedEmbeddingModel}
 							dropDownCallback={(option:string)=>{
 								props.settingsCallback({...currentSettings, selectedEmbeddingModel: option})
@@ -780,7 +784,7 @@ const AddLibrarySettings = (props: {
 								<div className='text-nav dark:text-nav-dark p-1 w-48'>Embedding model</div>
 								<DropdownOptions
 									width={'270px'}
-									optionsList={props.currentSettings?.embedding_models || defaultSettings.embedding_models}
+									optionsList={embeddingModels}
 									defaultOption={currentSettings.selectedEmbeddingModel}
 									dropDownCallback={(option:string)=>{
 										props.settingsCallback({...currentSettings, selectedEmbeddingModel: option})
@@ -961,8 +965,8 @@ const AddLibrarySettings = (props: {
 						<div className='text-nav dark:text-nav-dark p-1 w-48'>Embedding Model</div>
 						<DropdownOptions
 							width={'280px'}
-							optionsList={props.currentSettings.embedding_models}
-							defaultOption={currentSettings.sentence_transformer}
+							optionsList={embeddingModels}
+							defaultOption={currentSettings.selectedEmbeddingModel}
 							dropDownCallback={(option:string)=>{
 								props.settingsCallback({...currentSettings, selectedEmbeddingModel: option})
 							}}
