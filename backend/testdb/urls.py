@@ -38,6 +38,7 @@ urlpatterns = [
 	path('api/get_distance_between_answers/', apis.get_distance_between_answers, name='get_distance_between_answers'),
 	path('api/get_username/', apis.get_username, name='get_username'),
 	path('api/submit_disclaimer_agreement/', apis.disclaimer_agreement, name='disclaimer_agreement'),
+    path('api/llm_provider/', apis.llm_provider_config, name='llm_provider'),
     path('api/ollama_generate/', apis.ollama_generate, name='ollama_generate'),
     path('api/ollama_chat/', apis.ollama_chat, name='ollama_chat'),
     path('api/get_ollama_models/', apis.get_ollama_models, name='get_ollama_models'),

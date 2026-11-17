@@ -23,10 +23,18 @@ import re
 import queue
 import threading
 from ollama import Client as OllamaClient, ListResponse
+from ..llm_providers import OpenAICompatibleClient, provider_name, valid_model_name, direct_chat_dataset
 from django.contrib.auth.models import User
 
 
 logger = logging.getLogger(__name__)
+
+
+def _llm_client():
+    if provider_name() == 'ollama':
+        return OllamaClient(host=os.environ.get('OLLAMA_SERVER'))
+    return OpenAICompatibleClient()
+
 
 from .bm25_utils import (
     index_document_by_bm25, 
@@ -332,7 +340,7 @@ def get_context(request):
 
         # if no_context is true, create or get dataset
         if no_context:
-            dataset_name = model + '_direct_chat'
+            dataset_name = direct_chat_dataset(model)
             dataset_exist = Dataset.objects.filter(dataset_name=dataset_name).exists()
             if not dataset_exist:
                 dataset = Dataset.objects.create(
@@ -442,10 +450,11 @@ def get_context(request):
         if library_type == 'papers' and not skip_highlight:
             for source_grp in sources_grouped:
                 paper_obj = Papers.objects.filter(paper_dataset=dataset).filter(paper_title=source_grp[0]['document'])[0].paper_attachment
-                if (len(paper_obj.path.split('/')[-1].split('_')) > 1): 
-                    paper_name =   paper_obj.path.split('/')[-1].split('_')[0] + '.pdf'
+                attachment_name = os.path.basename(paper_obj.path)
+                if (len(attachment_name.split('_')) > 1):
+                    paper_name = attachment_name.split('_')[0] + '.pdf'
                 else:
-                    paper_name =   paper_obj.path.split('/')[-1]
+                    paper_name = attachment_name
                 print("paper_name: " + paper_name)
                 original_pdf_path = 'data/pdfs/'+ dataset_name + '/' + paper_name
                 highlighted_pdf_path = 'data/pdfs/' + dataset_name + '/' + paper_name.split('.')[0] + '_highlighted.pdf'
@@ -1525,12 +1534,10 @@ def ollama_generate(request):
             top_p = json_request.get('options', {}).get('top_p', 0.9)
 
             # Validate model_name input
-            if not model or not re.match(r'^[a-zA-Z0-9_\-:.]+$', model):
+            if not valid_model_name(model):
                 return Response({'error': True, 'error_message': 'Invalid model name'}, content_type="application/json")
 
-            client = OllamaClient(
-                host = os.environ.get('OLLAMA_SERVER')
-            )
+            client = _llm_client()
             
             # Non-streaming path: stream=False
             if not stream:
@@ -1622,7 +1629,7 @@ def ollama_chat(request):
     if request.method == 'POST':
         try:
             json_request = JSONParser().parse(request)
-            new_conversation = json_request['new_conversation']
+            new_conversation = json_request.get('new_conversation', False)
             model = json_request['model']
             messages = json_request['messages']
             stream = json_request.get('stream', True)
@@ -1633,15 +1640,13 @@ def ollama_chat(request):
             tools = json_request.get('tools', [])
 
             # Validate model_name input
-            if not model or not re.match(r'^[a-zA-Z0-9_\-:.]+$', model):
+            if not valid_model_name(model):
                 return Response({'error': True, 'error_message': 'Invalid model name'}, content_type="application/json")
 
-            client = OllamaClient(
-                host = os.environ.get('OLLAMA_SERVER')
-            )
+            client = _llm_client()
 
             # save the question to the database with the model name and messages
-            dataset_name = model + '_direct_chat'
+            dataset_name = direct_chat_dataset(model)
             if not Dataset.objects.filter(dataset_name=dataset_name).exists():
                 Dataset.objects.create(
                     dataset_name=dataset_name,
@@ -1764,8 +1769,16 @@ def get_ollama_models(request):
     if request.method == 'POST':
         models = []
         try:
+            if provider_name() != 'ollama':
+                for name in OpenAICompatibleClient().list_models():
+                    _register_ollama_model(name, '0')
+                    models.append({'name': name, 'direct_chat_dataset': direct_chat_dataset(name),
+                                   'size': 0, 'family': 'unknown',
+                                   'format': provider_name(), 'parameter_size': 'unknown',
+                                   'quantization_level': 'unknown'})
+                return Response({'added': True, 'models': models, 'provider': provider_name(),
+                                 'supports_pull': False})
             client = OllamaClient(host=os.environ.get('OLLAMA_SERVER'))
-            
             response: ListResponse = client.list()
             for model in response.models:
                 if model.size is not None and model.size > 0:
@@ -1784,13 +1797,15 @@ def get_ollama_models(request):
                             'parameter_size': model.details.get('parameter_size', 'unknown'),
                             'quantization_level': quantization_level,
                         })
-            return Response({'added':True, 'models': models}, content_type="application/json")
+            return Response({'added':True, 'models': models, 'provider': 'ollama', 'supports_pull': True}, content_type="application/json")
         except Exception:
             logger.exception("Unable to list Ollama models")
             return Response({'error': True, 'error_message': 'Unable to list models'}, status=500, content_type="application/json")
         
 @api_view(['POST'])
 def ollama_pull_model(request):
+    if provider_name() != 'ollama':
+        return Response({'error': True, 'error_message': 'Configure served models on the model server; this provider does not support downloads.'}, status=400)
     if request.method == 'POST':
         json_request = JSONParser().parse(request)
         model_name = json_request.get('name', '')
@@ -1876,3 +1891,8 @@ def ollama_pull_model(request):
         except Exception:
             logger.exception("Unable to start Ollama model pull")
             return Response({'error': True, 'error_message': 'Unable to start model download'}, status=500, content_type="application/json")
+
+@api_view(['GET'])
+def llm_provider_config(request):
+    name = provider_name()
+    return Response({'provider': name, 'supports_pull': name == 'ollama'})
