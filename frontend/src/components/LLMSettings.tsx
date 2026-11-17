@@ -13,6 +13,16 @@ const LLMSettings = (props: {
 		.filter((llm:string) => !props.llms.includes(llm.toLowerCase()))
 	const [llmToLoad, setLlmToLoad] = useState('')
 	const [message, setMessage] = useState('')
+	const [provider, setProvider] = useState('')
+	const [supportsPull, setSupportsPull] = useState(false)
+	useEffect(() => {
+		const controller = new AbortController()
+		fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/llm_provider/`, {signal: controller.signal})
+			.then(r => { if (!r.ok) throw new Error(); return r.json() })
+			.then(data => { setProvider(data.provider); setSupportsPull(data.supports_pull === true) })
+			.catch(() => {})
+		return () => controller.abort()
+	}, [])
 	const [modelLoaded, setModelLoaded] = useState(false)
 	const [progressPercent, setProgressPercent] = useState<number>(0)
 
@@ -190,8 +200,9 @@ const LLMSettings = (props: {
 
 	  return (
 		<div className='px-8 py-2 divide-y'>
+			{provider && <p className='py-3'>Provider: {provider}. {!supportsPull && 'Models are managed on the server. Connection settings and credentials stay on the backend.'}</p>}
 			<div className='flex flex-col justify-start my-4'>
-				<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> Available LLMs on system </div>
+				<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> Available LLMs on configured server </div>
 				<div className='text-nav dark:text-nav-dark px-4 flex justify-start'>
 					<ul className='list-disc'>
 						{props.llms.map((llm:string, index:number) => {
@@ -221,7 +232,7 @@ const LLMSettings = (props: {
 				</div>
 			</div>
 			{ 
-				currentSettings.restriction_without_login ? <></> :
+				currentSettings.restriction_without_login || !supportsPull ? <></> :
 				<div className='flex flex-col justify-start my-4'>
 					<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> LLMs ready to download </div>
 					{ 

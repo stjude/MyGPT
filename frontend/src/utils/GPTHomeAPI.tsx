@@ -1,3 +1,5 @@
+import {rememberModelCatalog} from './ModelCatalog'
+
 // Shared auth header helper (mirrors SettingsAPI.tsx)
 export const getAuthHeader = (frontendSettings: any): string => {
 	const jwtAccessToken = localStorage.getItem('access')
@@ -12,7 +14,7 @@ export const getAuthHeader = (frontendSettings: any): string => {
 	return staticToken
 }
 
-// GET Ollama api/tags  +  POST api/add_ollama_models/  +  POST api/add_embedding_models/
+// Discover through the configured backend provider, then register embedding metadata.
 // Returns filtered LLM names (non-F16 models).
 export const fetchAndRegisterOllamaModels = async (
 	frontendSettings: any,
@@ -21,16 +23,13 @@ export const fetchAndRegisterOllamaModels = async (
 	let llms: string[] = []
 	try {
 		let data: { models: any[] }
-		if (window.electronAPI?.isDesktop) {
-			data = await window.electronAPI.getOllamaStatus()
-		} else {
-			const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, {
-				method: 'GET',
-				signal,
-			})
-			if (!response.ok) return []
-			data = await response.json()
-		}
+		// The backend selects the provider and owns its credentials, including on desktop.
+		const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
+			method: 'POST', signal,
+		})
+		if (!response.ok) return []
+		data = await response.json()
+		rememberModelCatalog(data)
 
 		llms = data.models
 			.filter((model: any) => (model.details?.quantization_level ?? model.quantization_level) !== 'F16')

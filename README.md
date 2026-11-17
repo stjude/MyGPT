@@ -44,6 +44,8 @@
 
 # MyGPT
 
+For OpenAI-compatible or vLLM endpoints, see [model provider configuration](docs/model-providers.md). Ollama remains the default.
+
 ChatGPT has revolutionized creative occupations, but tasks requiring factual backing suffer from generalized models and limitations such as hallucinations and inconsistency. Here, we present MyGPT — an open-source Large Language Model (LLM) pipeline to ask questions for content from a curated list of publications or video/audio lectures. MyGPT minimizes hallucination by providing a context for the question and generates accurate answers with source citing. MyGPT can run on personal devices or cloud infrastructures and can help with complex tasks such as literature review and learning. 
 
 **Research article:** The MyGPT article is available in early access in *Nature Communications*. Read the article via DOI [10.1038/s41467-026-78509-6](https://doi.org/10.1038/s41467-026-78509-6). See [Citation](#citation) for citation details.

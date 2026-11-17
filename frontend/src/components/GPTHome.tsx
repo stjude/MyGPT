@@ -1,3 +1,4 @@
+import {directChatDataset, translationModel} from '../utils/ModelCatalog'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { Document, Page, pdfjs } from 'react-pdf'
@@ -108,6 +109,9 @@ function GPTHome(props:{
 		return renderers
 	}, [highlightsByPage, numPages])
 	const [mediaLoadError, setMediaLoadError] = useState('')
+	const [modelError, setModelError] = useState('')
+	const handleModelError = (error:any) => setModelError(error?.message || 'Model request failed')
+	useEffect(() => { setModelError('') }, [query])
 	const ConfidenceScoreColor = scaleSequential().domain([0, 100]).interpolator(interpolateRdYlGn)
 	const [answerWithoutContext, setAnswerWithoutContext] = useState(props.currentSettings.answerWithoutContext)
 	const [addDemoLibrary, setAddDemoLibrary] = useState(false)
@@ -543,26 +547,25 @@ function GPTHome(props:{
 		if(context.length > 1 && question.length > 1){
 			const postData = async () => {
 				let answerReceived:any = null
-				if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+				if (['ollama', 'openai', 'vllm'].includes(props.currentSettings.LLM_server_API_specs)){
 					answerReceived = await OllamaDirectGenerateStream(
-						props.currentSettings.selectedLlm, 
+						props.currentSettings.selectedLlm,
 						question, systemPrompt, addToolsPromt, mcpResponse,
 						props.currentSettings.temperature, props.currentSettings.top_k, props.currentSettings.top_p, 
 						setAnswer, isThinkStepSupported ? setThought : null
 					)
 				} else if (props.currentSettings.LLM_server_API_specs === 'sjray'){
 					answerReceived = await SJRayDirectGenerateStream(
-						props.currentSettings.selectedLlm, 
+						props.currentSettings.selectedLlm,
 						question, systemPrompt, addToolsPromt, mcpResponse,
 						props.currentSettings.temperature, props.currentSettings.top_k, props.currentSettings.top_p, 
 						setAnswer
 					)
-				} else if (props.currentSettings.LLM_server_API_specs === 'openai'){
-					
+
 				}
 				setAnswerReceived(answerReceived)
 			}
-			postData()
+			postData().catch(handleModelError)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, context, props.currentSettings.selectedLlm])
@@ -577,16 +580,16 @@ function GPTHome(props:{
 
 			const postData = async () => {
 				let nullAnswerReceived:any = null
-				if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+				if (['ollama', 'openai', 'vllm'].includes(props.currentSettings.LLM_server_API_specs)){
 					nullAnswerReceived = await OllamaDirectGenerateStream(
-						props.currentSettings.selectedLlm, 
+						props.currentSettings.selectedLlm,
 						question, systemPrompt, false, '',
 						props.currentSettings.temperature, props.currentSettings.top_k, props.currentSettings.top_p, 
 						setNullAnswer, isThinkStepSupported ? setNullThought : null
 					)
 				} else if (props.currentSettings.LLM_server_API_specs === 'sjray'){
 					nullAnswerReceived = await SJRayDirectGenerateStream(
-						props.currentSettings.selectedLlm, 
+						props.currentSettings.selectedLlm,
 						question, systemPrompt, false, '',
 						props.currentSettings.temperature, props.currentSettings.top_k, props.currentSettings.top_p, 
 						setNullAnswer
@@ -594,7 +597,7 @@ function GPTHome(props:{
 				}
 				setNullAnswerReceived(nullAnswerReceived)
 			}
-			postData()
+			postData().catch(handleModelError)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, context, props.currentSettings.selectedLlm, nullAnswer])
@@ -607,14 +610,14 @@ function GPTHome(props:{
 			return
 		}
 		const postData = async () => {
-			if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+			if (['ollama', 'openai', 'vllm'].includes(props.currentSettings.LLM_server_API_specs)){
 				let language_from_full = 'English'
 				let language_from = 'en'
 				let language_to_full = DatasetLanguage !== '-' ? supportedDatasetLanguages[DatasetLanguage].language_to_full : ''
 				let language_to = DatasetLanguage !== '-' ? supportedDatasetLanguages[DatasetLanguage].language_to : ''
 				let systemPrompt = `You are a professional ${language_from_full} (${language_from}) to ${language_to_full} (${language_to}) translator. Your goal is to accurately convey the meaning and nuances of the original ${language_from_full} text while adhering to ${language_to_full} grammar, vocabulary, and cultural sensitivities. Produce only the ${language_to_full} translation, without any additional explanations or commentary. Please translate the following ${language_from_full} text into ${language_to_full}: `
 				const translatedQueryReceived = await OllamaDirectGenerateNoStream(
-					'translategemma:latest', 
+					translationModel(props.currentSettings.selectedLlm),
 					query[query.length-1] && query[query.length-1].question ? query[query.length-1].question.replaceAll('"',"'") : '',
 					systemPrompt,
 					false,
@@ -625,7 +628,7 @@ function GPTHome(props:{
 				setTranslatedQueryReceived(translatedQueryReceived)
 			}
 		}
-		postData()
+		postData().catch(handleModelError)
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, DatasetLanguage])
 
@@ -638,14 +641,14 @@ function GPTHome(props:{
 			return
 		}
 		const postData = async () => {
-			if (props.currentSettings.LLM_server_API_specs === 'ollama'){
+			if (['ollama', 'openai', 'vllm'].includes(props.currentSettings.LLM_server_API_specs)){
 				let language_from_full = 'English'
 				let language_from = 'en'
 				let language_to_full = supportedDatasetLanguages[DatasetLanguage].language_to_full
 				let language_to = supportedDatasetLanguages[DatasetLanguage].language_to
 				let systemPrompt = `You are a professional ${language_from_full} (${language_from}) to ${language_to_full} (${language_to}) translator. Your goal is to accurately convey the meaning and nuances of the original ${language_from_full} text while adhering to ${language_to_full} grammar, vocabulary, and cultural sensitivities. Produce only the ${language_to_full} translation, without any additional explanations or commentary. Please translate the following ${language_from_full} text into ${language_to_full}: `
 				const translatedAnswerReceived = await OllamaDirectGenerateNoStream(
-					'translategemma:latest', 
+					translationModel(props.currentSettings.selectedLlm),
 					answer,
 					systemPrompt,
 					false,
@@ -656,7 +659,7 @@ function GPTHome(props:{
 				setTranslatedAnswerReceived(translatedAnswerReceived)
 			}
 		}
-		postData()
+		postData().catch(handleModelError)
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[answer, answerReceived, DatasetLanguage])
 
@@ -770,7 +773,7 @@ function GPTHome(props:{
 				let answerReceived = data.answerReceived
 				setAnswerReceived(answerReceived)
 			}
-			postData()
+			postData().catch(handleModelError)
 		}
 
 		else if (messages.length > 0 && answer === '' && !answerReceived && llmsWithToolSupport.includes(props.currentSettings.selectedLlm.split(':')[0]) && mcpOllamaTools.length){
@@ -782,7 +785,7 @@ function GPTHome(props:{
 				const data = await OllamaChatStreamWithToolSupport(body, setAnswer, props.currentSettings.MCPTools, props.currentSettings.MCPClient, stream, returnToolResponse, isThinkStepSupported ? setThought : null)
 				setAnswerReceived(data.answerReceived)
 			}
-			postDataWithTools()
+			postDataWithTools().catch(handleModelError)
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	},[query, props.currentSettings.selectedLlm, answerWithoutContext])
@@ -974,7 +977,7 @@ function GPTHome(props:{
 			setAnswerWithoutContext(false)
 			resetStates()
 			setSelectedDataset(props.currentSettings.selectedDataset)
-			props.settingsCallback({ ...props.currentSettings, selectedDataset: props.currentSettings.selectedLlm + '_direct_chat', answerWithoutContext: true, fetchPapers: false })
+			props.settingsCallback({ ...props.currentSettings, selectedDataset: directChatDataset(props.currentSettings.selectedLlm), answerWithoutContext: true, fetchPapers: false })
 			return
 		}
 		// else if (mode === 'workflow_for_documents') {
@@ -1045,6 +1048,7 @@ function GPTHome(props:{
 
 	return (
 		<div className='p-4 pt-28 pb-3 bg-gray-200 dark:bg-neutral-800 max-w-[2000px] w-full mx-auto flex-1 min-h-0 flex flex-col overflow-hidden'>
+			{modelError && <div role="alert" className="p-3 text-red-700 bg-red-50">{modelError}</div>}
 			<div className='flex-1 min-h-0 flex w-full items-stretch overflow-hidden'>
 			{/* Panel for Chat */}
 			{!answerWithoutContext && panelCollapsed.left ? (
@@ -1108,7 +1112,7 @@ function GPTHome(props:{
 						// defaultValue={props.currentSettings.defaultLlm}
 						onChange={(e) => {
 							if (answerWithoutContext){
-								let temp_dataset = e.target.value + '_direct_chat'
+								let temp_dataset = directChatDataset(e.target.value)
 								// setSelectedDataset(temp_dataset)
 								props.settingsCallback({...props.currentSettings, selectedLlm: e.target.value, selectedDataset: temp_dataset})
 							} else
@@ -1267,7 +1271,7 @@ function GPTHome(props:{
 									if (e.target.checked){
 										resetStates()
 										setSelectedDataset(props.currentSettings.selectedDataset)
-										props.settingsCallback({...props.currentSettings, selectedDataset: props.currentSettings.selectedLlm + '_direct_chat', answerWithoutContext: true, fetchPapers: false})
+										props.settingsCallback({...props.currentSettings, selectedDataset: directChatDataset(props.currentSettings.selectedLlm), answerWithoutContext: true, fetchPapers: false})
 									} else {
 										resetStates()
 										props.settingsCallback({...props.currentSettings, selectedDataset: selectedDataset, answerWithoutContext: false, fetchPapers: true})

@@ -81,6 +81,29 @@ describe('GPTHome', () => {
     expect(element).toBeInTheDocument()
   })
 
+  it.each(['openai', 'vllm'])('routes document answers through the configured %s provider', async (provider) => {
+    GPTHomeAPI.fetchContext.mockResolvedValue({context: 'The lighthouse is violet', relevance_score: 90, sources: []})
+    renderGPTHome({selectedLlm: 'Qwen/Test-Model', LLM_server_API_specs: provider})
+    const input = screen.getByPlaceholderText(/Type your question here/i)
+    fireEvent.change(input, {target: {value: 'What color is the lighthouse?'}})
+    fireEvent.keyUp(input, {key: 'Enter', keyCode: 13})
+    await waitFor(() => expect(GPTHomeAPI.saveAnswer).toHaveBeenCalled())
+    expect(OllamaDirectGenerateStream).toHaveBeenCalledWith(
+      'Qwen/Test-Model', 'What color is the lighthouse?', expect.stringContaining('violet'),
+      false, '', expect.any(Number), expect.any(Number), expect.any(Number), expect.any(Function), null
+    )
+  })
+
+  it('shows endpoint errors without saving an unsuccessful answer', async () => {
+    OllamaDirectGenerateStream.mockRejectedValue(new Error('Model generation failed'))
+    renderGPTHome({selectedLlm: 'Qwen/Test-Model', LLM_server_API_specs: 'openai'})
+    const input = screen.getByPlaceholderText(/Type your question here/i)
+    fireEvent.change(input, {target: {value: 'A question'}})
+    fireEvent.keyUp(input, {key: 'Enter', keyCode: 13})
+    expect(await screen.findByRole('alert')).toHaveTextContent('Model generation failed')
+    expect(GPTHomeAPI.saveAnswer).not.toHaveBeenCalled()
+  })
+
   it('renders current library controls', () => {
     renderGPTHome()
     expect(screen.getByText(/Current library/i)).toBeInTheDocument()
@@ -168,50 +191,29 @@ describe('GPTHome', () => {
     expect(screen.getByText('Page 2 of "Paper title"')).toBeInTheDocument()
   })
 
-  it('loads desktop models through Electron instead of fetching Ollama from the renderer', async () => {
+  it('discovers namespaced models through the backend even in Electron', async () => {
     const { fetchAndRegisterOllamaModels } = await vi.importActual('../utils/GPTHomeAPI')
     const electronAPI = window.electronAPI
     const fetch = globalThis.fetch
-    window.electronAPI = {
-      isDesktop: true,
-      getOllamaStatus: vi.fn().mockResolvedValue({
-        isRunning: true,
-        models: [
-          { name: 'llama3:latest', size: 1000, details: { family: 'llama', quantization_level: 'Q4_K_M' } },
-          { name: 'embedding:latest', size: 1000, details: { family: 'bert', quantization_level: 'F16' } },
-        ],
-      }),
-    }
-    globalThis.fetch = vi.fn()
-
+    window.electronAPI = {isDesktop: true, getOllamaStatus: vi.fn()}
+    globalThis.fetch = vi.fn().mockResolvedValue({ok: true, json: async () => ({
+      models: [{name: 'Qwen/Test-Model', size: 0, quantization_level: 'unknown'}],
+      provider: 'vllm', supports_pull: false,
+    })})
     try {
-      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['llama3:latest'])
-      expect(window.electronAPI.getOllamaStatus).toHaveBeenCalledOnce()
-      expect(globalThis.fetch).not.toHaveBeenCalled()
-    } finally {
-      window.electronAPI = electronAPI
-      globalThis.fetch = fetch
-    }
+      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['Qwen/Test-Model'])
+      expect(window.electronAPI.getOllamaStatus).not.toHaveBeenCalled()
+      expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/get_ollama_models/'), expect.objectContaining({method: 'POST'}))
+    } finally { window.electronAPI = electronAPI; globalThis.fetch = fetch }
   })
 
-  it('keeps discovered desktop models when backend registration fails', async () => {
+  it('does not fall back to another server when configured model discovery fails', async () => {
     const { fetchAndRegisterOllamaModels } = await vi.importActual('../utils/GPTHomeAPI')
-    const electronAPI = window.electronAPI
     const fetch = globalThis.fetch
-    window.electronAPI = {
-      isDesktop: true,
-      getOllamaStatus: vi.fn().mockResolvedValue({
-        isRunning: true,
-        models: [{ name: 'llama3:latest', size: 1000, details: { family: 'llama', quantization_level: 'Q4_K_M' } }],
-      }),
-    }
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Backend unavailable'))
-
+    globalThis.fetch = vi.fn().mockResolvedValue({ok: false})
     try {
-      expect(await fetchAndRegisterOllamaModels({ django_login: false })).toEqual(['llama3:latest'])
-    } finally {
-      window.electronAPI = electronAPI
-      globalThis.fetch = fetch
-    }
+      expect(await fetchAndRegisterOllamaModels(null)).toEqual([])
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+    } finally { globalThis.fetch = fetch }
   })
 })
