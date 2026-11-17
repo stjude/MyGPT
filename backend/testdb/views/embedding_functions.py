@@ -6,7 +6,6 @@ import httpx
 import numpy as np
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from chromadb.utils.embedding_functions import register_embedding_function
-from .openai_client import openai_tls_verification, openai_request_errors
 
 OPENAI_EMBEDDING_MODELS = (
     'text-embedding-3-small',
@@ -26,7 +25,6 @@ class OpenAIEmbeddingFunction(EmbeddingFunction[Documents]):
             base_url='https://api.openai.com/v1/',
             headers={'Authorization': f'Bearer {api_key}'},
             timeout=60.0,
-            verify=openai_tls_verification(),
         )
 
     @staticmethod
@@ -46,11 +44,10 @@ class OpenAIEmbeddingFunction(EmbeddingFunction[Documents]):
         vectors: Embeddings = []
         for offset in range(0, len(input), 100):
             batch = input[offset:offset + 100]
-            with openai_request_errors():
-                response = self._session.post(
-                    'embeddings',
-                    json={'model': self._model_name, 'input': batch, 'encoding_format': 'float'},
-                )
+            response = self._session.post(
+                'embeddings',
+                json={'model': self._model_name, 'input': batch, 'encoding_format': 'float'},
+            )
             response.raise_for_status()
             payload = response.json()
             data = payload.get('data') if isinstance(payload, dict) else None

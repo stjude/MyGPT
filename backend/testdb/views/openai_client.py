@@ -1,11 +1,8 @@
 import json
 import os
-import ssl
 from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import Any
 
-import certifi
 import httpx
 
 
@@ -18,48 +15,6 @@ def is_openai_model(model: str) -> bool:
 
 class OpenAIResponseError(ValueError):
     pass
-
-
-def openai_tls_verification() -> ssl.SSLContext | bool:
-    ca_bundle = os.environ.get('OPENAI_CA_BUNDLE', '').strip()
-    if not ca_bundle:
-        return True
-    try:
-        context = ssl.create_default_context(
-            cafile=os.environ.get('SSL_CERT_FILE') or certifi.where(),
-            capath=os.environ.get('SSL_CERT_DIR') or None,
-        )
-        context.load_verify_locations(cafile=ca_bundle)
-    except (OSError, ssl.SSLError) as error:
-        raise OpenAIResponseError(
-            'Unable to load OPENAI_CA_BUNDLE. Set it to a readable PEM CA certificate '
-            'file inside the backend container.'
-        ) from error
-    return context
-
-
-@contextmanager
-def openai_request_errors() -> Iterator[None]:
-    try:
-        yield
-    except httpx.RequestError as error:
-        cause: BaseException | None = error
-        certificate_error = False
-        while cause is not None:
-            if isinstance(cause, ssl.SSLCertVerificationError) or 'CERTIFICATE_VERIFY_FAILED' in str(cause):
-                certificate_error = True
-                break
-            cause = cause.__cause__ or cause.__context__
-        if certificate_error:
-            message = (
-                'OpenAI TLS certificate verification failed. If your network uses an HTTPS '
-                'inspection proxy, obtain its CA certificate from your IT team, mount the PEM '
-                'file in the backend container, and set OPENAI_CA_BUNDLE to that container path. '
-                'Do not disable certificate verification.'
-            )
-        else:
-            message = 'Unable to reach OpenAI. Check outbound HTTPS, proxy settings, and network timeouts.'
-        raise OpenAIResponseError(message) from error
 
 
 class OpenAIResponsesClient:
@@ -134,7 +89,6 @@ class OpenAIResponsesClient:
             base_url='https://api.openai.com/v1/',
             headers={'Authorization': 'Bearer ' + self._api_key},
             timeout=httpx.Timeout(120.0, connect=15.0),
-            verify=openai_tls_verification(),
         )
 
     @staticmethod
@@ -172,13 +126,13 @@ class OpenAIResponsesClient:
         }
 
     def _complete(self, payload: dict) -> dict:
-        with openai_request_errors(), self._client() as client:
+        with self._client() as client:
             response = client.post('responses', json=payload)
             self._check_status(response)
             return self._message(response.json())
 
     def _stream(self, payload: dict, *, chat: bool) -> Iterator[dict]:
-        with openai_request_errors(), self._client() as client, client.stream('POST', 'responses', json=payload) as response:
+        with self._client() as client, client.stream('POST', 'responses', json=payload) as response:
             self._check_status(response)
             completed = False
             emitted_text = False

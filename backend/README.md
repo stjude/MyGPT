@@ -83,43 +83,6 @@ Ollama-specific `top_k`, `top_p`, `temperature`, and `think` settings are not fo
 
 **Privacy and cost:** OpenAI LLM use sends prompts, selected document context, chat history, and any tool results to OpenAI. Comparison-answer generation and translation can make additional paid requests. Only use approved data. Requests set `store: false`; this is not a guarantee of zero provider retention, so review your organization's OpenAI data policies. To run locally instead, select an Ollama model and set `VITE_DEFAULT_LLM` to its name before rebuilding.
 
-### OpenAI TLS certificate errors (corporate networks)
-
-`CERTIFICATE_VERIFY_FAILED: self-signed certificate in certificate chain` means the backend cannot validate the HTTPS certificate chain it received. The request has not reached OpenAI's API processing yet; changing the prompt or model will not fix this. A corporate HTTPS inspection proxy is one possible cause. A host's trusted certificates are not automatically trusted inside Docker.
-
-Obtain the approved root/intermediate CA certificates in PEM format from your IT team (not an arbitrary certificate downloaded from the failing connection). Mount the PEM bundle read-only into the **backend** container and set this in the root `.env_backend`:
-
-```dotenv
-OPENAI_CA_BUNDLE=/etc/mygpt-certs/organization-ca.pem
-```
-
-For any Docker Compose installation (macOS, Windows, Linux, or server), add a mount to your existing backend service, or use an override such as:
-
-```yaml
-services:
-  backend:
-    volumes:
-      - ./organization-ca.pem:/etc/mygpt-certs/organization-ca.pem:ro
-```
-
-With the override saved as `compose.ca.yml`, recreate the backend using the same Compose files you normally use plus this override:
-
-```bash
-docker compose -f docker-compose.yml -f compose.ca.yml up -d --no-deps --build --force-recreate backend
-```
-
-Use the correct CA file location on your host; `OPENAI_CA_BUNDLE` must use the **container** path. For a pre-built image, first pull a version containing this support instead of building. Keep the override in subsequent Compose commands. For a non-Docker backend, set the variable to a local PEM path.
-
-The additional CA applies to both OpenAI LLMs and embeddings; standard public CAs remain trusted. Existing HTTPX `SSL_CERT_FILE`/`SSL_CERT_DIR` and proxy environment settings are still honored. An unreadable or invalid CA bundle fails explicitly. Do **not** use `verify=False` or disable TLS verification.
-
-To check the TLS connection without sending a key, prompt, or paid generation request:
-
-```bash
-docker compose -f docker-compose.yml -f compose.ca.yml exec backend python3 manage.py shell -c "import httpx; from testdb.views.openai_client import openai_tls_verification; r = httpx.get('https://api.openai.com/v1/models', verify=openai_tls_verification()); print('TLS connected; HTTP', r.status_code)"
-```
-
-An HTTP `401` is expected without an API key: it confirms a TLS connection and an HTTP response, not model access. If verification still fails, ask IT to check the proxy's certificate chain, expiry, and hostname. Then retry generation to verify key/model access separately.
-
 ## Run Locally
 
 From the repository root, build and start the database and backend:

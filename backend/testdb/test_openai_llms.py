@@ -1,6 +1,5 @@
 import json
 import os
-import ssl
 from unittest.mock import patch
 
 import httpx
@@ -27,13 +26,10 @@ class OpenAILLMTests(TestCase):
         self.status = 200
         self.payload = completed()
         self.events = None
-        self.transport_error = None
         client_factory = httpx.Client
 
         def handle_request(request):
             self.requests.append(request)
-            if self.transport_error:
-                raise self.transport_error
             if self.events is not None:
                 body = ''.join('event: ignored\ndata: ' + json.dumps(event) + '\n\n' for event in self.events)
                 return httpx.Response(self.status, text=body, headers={'Content-Type': 'text/event-stream'})
@@ -161,37 +157,6 @@ class OpenAILLMTests(TestCase):
                 self.assertEqual(response.status_code, 502)
                 self.assertTrue(response.json()['error'])
                 self.assertIn(str(status), response.json()['error_message'])
-
-    def test_tls_failure_is_actionable_for_streaming_and_non_streaming_requests(self):
-        self.transport_error = httpx.ConnectError(
-            '[SSL: CERTIFICATE_VERIFY_FAILED] self-signed certificate in certificate chain',
-        )
-        self.transport_error.__cause__ = ssl.SSLCertVerificationError('untrusted certificate')
-        for endpoint in (self.generate, self.chat):
-            for stream in (False, True):
-                with self.subTest(endpoint=endpoint.__name__, stream=stream):
-                    with self.assertLogs('testdb.views.apis', level='ERROR') as logs:
-                        response = endpoint(stream=stream)
-                        if stream:
-                            events = [json.loads(line) for line in response.streaming_content]
-                            data = events[-1]
-                            self.assertFalse(any(event.get('type') == 'done' for event in events))
-                        else:
-                            self.assertEqual(response.status_code, 502)
-                            data = response.json()
-                    self.assertTrue(data['error'])
-                    self.assertIn('OPENAI_CA_BUNDLE', data['error_message'])
-                    self.assertIn('OpenAI', logs.output[0])
-                    self.assertNotIn('Ollama', logs.output[0])
-        self.ollama.assert_not_called()
-
-    def test_network_failure_is_not_reported_as_ollama_or_certificate_failure(self):
-        self.transport_error = httpx.ReadTimeout('timed out')
-        with self.assertLogs('testdb.views.apis', level='ERROR'):
-            response = self.generate()
-        self.assertEqual(response.status_code, 502)
-        self.assertIn('Unable to reach OpenAI', response.json()['error_message'])
-        self.assertNotIn('certificate', response.json()['error_message'])
 
     def test_failed_or_truncated_stream_never_yields_success(self):
         for events in (
