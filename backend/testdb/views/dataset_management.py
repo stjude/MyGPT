@@ -147,8 +147,8 @@ def add_dataset_from_upload(request, progress_callback=None):
             raise ValueError("Invalid file extension")
 
         if doctype.lower() in ['.xlsx', '.xls', '.csv']:
-            # base_name is already constrained by safe_path. Sanitizing an
-            # absolute path corrupts Windows drive letters (C: becomes C_).
+            # sanitize base_name and doctype
+            base_name = sanitize_filename(base_name)
             doctype = sanitize_filename(doctype)
 
             with open(base_name + doctype, 'wb') as f:
@@ -202,7 +202,8 @@ def add_dataset_from_upload(request, progress_callback=None):
                 data.append(chunk)
             
         else:
-            # Keep the absolute path returned by safe_path intact.
+            # sanitize base_name and doctype
+            base_name = sanitize_filename(base_name)
             doctype = sanitize_filename(doctype)
 
             pdf_name = base_name + '.pdf'

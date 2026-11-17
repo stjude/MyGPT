@@ -44,8 +44,7 @@
 
 # MyGPT
 
-This fork adds **OpenAI-compatible and vLLM generation endpoints** while retaining
-Ollama as the default. See [model provider setup and local validation](docs/model-providers.md).
+For OpenAI-compatible or vLLM endpoints, see [model provider configuration](docs/model-providers.md). Ollama remains the default.
 
 ChatGPT has revolutionized creative occupations, but tasks requiring factual backing suffer from generalized models and limitations such as hallucinations and inconsistency. Here, we present MyGPT — an open-source Large Language Model (LLM) pipeline to ask questions for content from a curated list of publications or video/audio lectures. MyGPT minimizes hallucination by providing a context for the question and generates accurate answers with source citing. MyGPT can run on personal devices or cloud infrastructures and can help with complex tasks such as literature review and learning. 
 

@@ -14,7 +14,7 @@ export const getAuthHeader = (frontendSettings: any): string => {
 	return staticToken
 }
 
-// GET Ollama api/tags  +  POST api/add_ollama_models/  +  POST api/add_embedding_models/
+// Discover through the configured backend provider, then register embedding metadata.
 // Returns filtered LLM names (non-F16 models).
 export const fetchAndRegisterOllamaModels = async (
 	frontendSettings: any,

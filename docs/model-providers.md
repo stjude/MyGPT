@@ -1,15 +1,8 @@
-# Generation providers
+# Model providers
 
-MyGPT can use Ollama (the default), an OpenAI Chat Completions-compatible server,
-or vLLM. This applies to document-grounded generation, direct chat, model discovery,
-streaming, and non-streaming tool calls. The browser uses MyGPT's existing backend
-API; provider credentials and the upstream URL are configured only on the server.
-There is no automatic fallback to a different provider.
-
-## Configuration
-
-Set these variables in the ignored `.env_backend` used by Docker Compose, or in
-the backend process environment. Restart the backend after changing them.
+MyGPT supports Ollama (default), OpenAI Chat Completions-compatible endpoints,
+and vLLM for generation, direct chat, model discovery, and streaming. Configure
+the backend process or ignored `.env_backend` file and restart it:
 
 ```dotenv
 LLM_PROVIDER=vllm
@@ -19,69 +12,37 @@ LLM_MAX_OUTPUT_TOKENS=2048
 LLM_TIMEOUT_SECONDS=120
 ```
 
-For a generic compatible server use `LLM_PROVIDER=openai`. The URL must include
-the API prefix; MyGPT appends `/models` and `/chat/completions`. Model names such
-as `Qwen/Qwen3-32B` are preserved exactly. An empty API key supports a trusted
-internal server that does not require bearer authentication. Use HTTPS when
-connecting across an untrusted network. Redirects are not followed.
+Use `LLM_PROVIDER=openai` for other compatible servers. For OpenAI's hosted API,
+set `LLM_BASE_URL=https://api.openai.com/v1` and supply your API key. The URL must
+include the API prefix: MyGPT appends `/models` and `/chat/completions`. Model IDs
+such as `Qwen/Qwen3-32B` are supported. An empty key permits unauthenticated local
+servers; use HTTPS for remote servers. Credentials stay on the backend.
 
-For OpenAI's hosted Chat Completions API, use `https://api.openai.com/v1` and an
-appropriate API key. This integration does not implement the Responses API.
-If a model requires the newer token-limit parameter, set
-`LLM_TOKEN_PARAMETER=max_completion_tokens`. For models that do not accept
-sampling controls, set `LLM_SEND_SAMPLING=false`.
+Optional model-specific settings:
 
-`temperature` and `top_p` are portable sampling fields. `top_k` is sent only for
-the `vllm` provider. Ollama's `think` option is not forwarded. Optional server-side
-`LLM_EXTRA_BODY` accepts only `reasoning_effort` and `chat_template_kwargs`, e.g.
-`{"chat_template_kwargs":{"enable_thinking":false}}` for a compatible Qwen
-template. These options are model/server-specific; leave them unset unless supported.
-Reasoning returned as `reasoning_content` or `reasoning` is separated from answer text.
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LLM_TOKEN_PARAMETER` | `max_tokens` | Set to `max_completion_tokens` when required by the model |
+| `LLM_SEND_SAMPLING` | `true` | Set to `false` for models that reject sampling controls |
+| `LLM_EXTRA_BODY` | `{}` | Only `reasoning_effort` and `chat_template_kwargs` are accepted; for compatible Qwen templates, `{"chat_template_kwargs":{"enable_thinking":false}}` disables reasoning |
 
-The model list comes from the configured backend provider, including in Electron.
-Settings show the active provider and hide Ollama downloads for remote providers.
-Manage vLLM's served models on the vLLM server. The legacy `LLM_server_API_specs`
-frontend setting can remain `ollama`: that selects MyGPT's normalized transport,
-not the backend inference engine. `openai` and `vllm` also select that transport.
+`temperature` and `top_p` are forwarded; `top_k` is vLLM-only. Ollama's `think`
+field is not forwarded. Returned reasoning is separated from answer text.
+Settings hide Ollama downloads for remote providers. The legacy frontend
+`LLM_server_API_specs` setting may remain `ollama`; the backend selects the provider.
+Remote translation uses the selected model instead of `translategemma:latest`.
 
-## Scope and data handling
+Embeddings and rerankers retain their existing configuration. Document context is
+sent to the chosen generation server. This integration does not add the Responses
+API, provider fallback, or automatic context trimming. Tool/vision support depends
+on the model; existing non-streaming tool selection preserves tool-call IDs.
 
-- Embeddings, rerankers, and ingestion are unchanged. A generation endpoint alone
-  does not replace those services. Keep your existing embedding configuration.
-- Document context and prompts are sent to the configured generation server.
-  Use an approved local/internal endpoint when keeping data on your own infrastructure.
-- Translation uses the selected generation model for remote providers; Ollama
-  retains its existing `translategemma:latest` translation model.
-- Tool calls use the existing non-streaming tool-selection step followed by a
-  streamed or non-streamed answer. Tool-call IDs are retained in follow-up messages.
-  Tool/vision support still depends on the selected model and server configuration.
-- HTTP failures, malformed responses, truncated completions, and interrupted streams
-  report failures instead of treating partial output as a completed answer.
-- Output-token limits reserve generation capacity; they do not automatically trim
-  a document context that exceeds the model's context window.
+## Tests
 
-## Local validation
-
-From `backend`, run `python -m pytest testdb`. The provider tests start a loopback
-HTTP server and exercise real JSON/SSE requests, both provider modes, namespaced
-models, credentials, tool calls, split UTF-8, failure handling, and Django endpoints.
-From `frontend`, run `npm ci`, `npm test`, and `npm run build`.
-
-To explicitly test your configured live endpoint with synthetic text only:
-
-```sh
-export MYGPT_LIVE_PROVIDER_TEST=1
-export LLM_TEST_MODEL=your-served-model-id
-python -m pytest testdb/test_llm_provider_live.py -v
-```
-
-Provide `LLM_PROVIDER`, `LLM_BASE_URL`, and `LLM_API_KEY` in the process environment.
-The test creates a temporary test database, sends a short invented context, and
-checks model listing, direct chat, and streamed/non-streamed context-grounded
-generation through the actual Django API. It never uploads a document library.
-Normal tests skip the live check, and no credential is stored in the repository.
-
-For a real scientific PDF test, see [Nature paper validation](nature-paper-validation.md).
-This additionally exercises upload, local embeddings, vector retrieval, PDF source
-pages, highlighting, and grounded generation. It found and fixed two Windows path
-handling defects in the existing document pipeline.
+Run `python -m pytest testdb` from `backend`, and `npm test` / `npm run build` from
+`frontend`. Tests cover both profiles, JSON/SSE, namespaced IDs, tool calls,
+UTF-8 boundaries, and errors without exposing upstream credentials or prompts.
+To test a live server, set the provider variables above, `LLM_TEST_MODEL` to a
+served model, and `MYGPT_LIVE_PROVIDER_TEST=1`, then run
+`python -m pytest testdb/test_llm_provider_live.py -v`. This opt-in test uses
+synthetic text and a temporary database; it is skipped in ordinary CI.

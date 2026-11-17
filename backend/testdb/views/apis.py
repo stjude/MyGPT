@@ -450,11 +450,10 @@ def get_context(request):
         if library_type == 'papers' and not skip_highlight:
             for source_grp in sources_grouped:
                 paper_obj = Papers.objects.filter(paper_dataset=dataset).filter(paper_title=source_grp[0]['document'])[0].paper_attachment
-                attachment_name = os.path.basename(paper_obj.path)
-                if (len(attachment_name.split('_')) > 1):
-                    paper_name = attachment_name.split('_')[0] + '.pdf'
+                if (len(paper_obj.path.split('/')[-1].split('_')) > 1): 
+                    paper_name =   paper_obj.path.split('/')[-1].split('_')[0] + '.pdf'
                 else:
-                    paper_name = attachment_name
+                    paper_name =   paper_obj.path.split('/')[-1]
                 print("paper_name: " + paper_name)
                 original_pdf_path = 'data/pdfs/'+ dataset_name + '/' + paper_name
                 highlighted_pdf_path = 'data/pdfs/' + dataset_name + '/' + paper_name.split('.')[0] + '_highlighted.pdf'
@@ -1791,6 +1790,7 @@ def get_ollama_models(request):
                             )
                         models.append({
                             'name': model.model,
+                            'direct_chat_dataset': direct_chat_dataset(model.model),
                             'size': model.size,
                             'family': model.details.get('family', 'unknown'),
                             'format': model.details.get('format', 'unknown'),
