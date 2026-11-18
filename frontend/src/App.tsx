@@ -1,5 +1,5 @@
 import './App.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type SetStateAction } from 'react'
 import TopNav from './components/TopNav'
 import GPTHome from './components/GPTHome'
 import Settings from './components/Settings'
@@ -41,10 +41,15 @@ function App() {
   const [showFAQ, setShowFAQ] = useState(currentSettings.showFAQ || defaultSettings.showFAQ)
   const [runtimeRevision, setRuntimeRevision] = useState(0)
 
-  const settingsCallback = (newSettings:any) => {
-    newSettings.restriction_without_login = frontendSettings.restriction_without_login
-    setCurrentSettings(applyModelProvider(newSettings, frontendSettings.model_provider || 'ollama'))
-    if (newSettings.showSettings){
+  const settingsCallback = (newSettings: SetStateAction<typeof defaultSettings>) => {
+    setCurrentSettings(settings => {
+      const resolvedSettings = typeof newSettings === 'function' ? newSettings(settings) : newSettings
+      return applyModelProvider({
+        ...resolvedSettings,
+        restriction_without_login: frontendSettings.restriction_without_login,
+      }, frontendSettings.model_provider || 'ollama')
+    })
+    if (typeof newSettings !== 'function' && newSettings.showSettings){
       setShowSettings(newSettings.showSettings)
     }
   }

@@ -1573,7 +1573,7 @@ def ollama_generate(request):
                     }, content_type="application/json")
                 except OpenAIResponseError as error:
                     logger.exception("OpenAI generate request failed")
-                    return Response({'error': True, 'error_message': 'Upstream model request failed'}, status=502)
+                    return Response({'error': True, 'error_message': str(error)}, status=502)
                 except Exception:
                     logger.exception("Ollama generate request failed")
                     return Response({'error': True, 'error_message': 'Model generation failed'}, status=500, content_type="application/json")
@@ -1615,9 +1615,9 @@ def ollama_generate(request):
                     
                     # Signal completion
                     yield json.dumps({'type': 'done', 'content': '', 'done': True}) + '\n'
-                except OpenAIResponseError:
+                except OpenAIResponseError as error:
                     logger.exception("Streaming OpenAI generate request failed")
-                    yield json.dumps({'error': True, 'error_message': 'Model generation failed', 'done': True}) + '\n'
+                    yield json.dumps({'error': True, 'error_message': str(error), 'done': True}) + '\n'
                 except Exception:
                     logger.exception("Streaming Ollama generate request failed")
                     yield json.dumps({'error': True, 'error_message': 'Model generation failed', 'done': True}) + '\n'
@@ -1626,9 +1626,9 @@ def ollama_generate(request):
                 stream_response(),
                 content_type='application/x-ndjson'
             )
-        except OpenAIResponseError:
+        except OpenAIResponseError as error:
             logger.exception("OpenAI generation configuration failed")
-            return Response({'error': True, 'error_message': 'Unable to process generation request'}, status=400)
+            return Response({'error': True, 'error_message': str(error)}, status=400)
         except Exception:
             logger.exception("Invalid Ollama generate request")
             return Response({'error': True, 'error_message': 'Unable to process generation request'}, status=500, content_type="application/json")
@@ -1735,9 +1735,9 @@ def ollama_chat(request):
                         return_response['openai_output'] = message.get('openai_output', [])
                     
                     return Response(return_response, content_type="application/json")
-                except OpenAIResponseError:
+                except OpenAIResponseError as error:
                     logger.exception("OpenAI chat request failed")
-                    return Response({'error': True, 'error_message': 'Upstream model request failed'}, status=502)
+                    return Response({'error': True, 'error_message': str(error)}, status=502)
                 except Exception:
                     logger.exception("Ollama chat request failed")
                     return Response({'error': True, 'error_message': 'Model chat failed'}, status=500, content_type="application/json")
@@ -1768,9 +1768,9 @@ def ollama_chat(request):
                     
                     # Signal completion
                     yield json.dumps({'type': 'done', 'content': '', 'done': True}) + '\n'
-                except OpenAIResponseError:
+                except OpenAIResponseError as error:
                     logger.exception("Streaming OpenAI chat request failed")
-                    yield json.dumps({'error': True, 'error_message': 'Upstream model request failed', 'done': True}) + '\n'
+                    yield json.dumps({'error': True, 'error_message': str(error), 'done': True}) + '\n'
                 except Exception:
                     logger.exception("Streaming Ollama chat request failed")
                     yield json.dumps({'error': True, 'error_message': 'Model chat failed', 'done': True}) + '\n'
@@ -1779,9 +1779,9 @@ def ollama_chat(request):
                 stream_response(),
                 content_type='application/x-ndjson'
             )
-        except OpenAIResponseError:
+        except OpenAIResponseError as error:
             logger.exception("OpenAI chat configuration failed")
-            return Response({'error': True, 'error_message': 'Unable to process chat request'}, status=400)
+            return Response({'error': True, 'error_message': str(error)}, status=400)
         except Exception:
             logger.exception("Invalid Ollama chat request")
             return Response({'error': True, 'error_message': 'Unable to process chat request'}, status=500, content_type="application/json")

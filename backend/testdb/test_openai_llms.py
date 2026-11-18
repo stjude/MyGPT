@@ -142,34 +142,61 @@ class OpenAILLMTests(TestCase):
     def test_missing_key_returns_actionable_error_without_calling_provider(self):
         with patch.dict(os.environ, {'OPENAI_API_KEY': ''}):
             for endpoint in (self.generate, self.chat):
-                with self.subTest(endpoint=endpoint.__name__), self.assertLogs('testdb.views.apis', level='ERROR'):
-                    response = endpoint()
-                    self.assertEqual(response.status_code, 400)
-                    self.assertIn('OPENAI_API_KEY', response.json()['error_message'])
+                for stream in (False, True):
+                    with self.subTest(endpoint=endpoint.__name__, stream=stream), self.assertLogs('testdb.views.apis', level='ERROR'):
+                        response = endpoint(stream=stream)
+                        self.assertEqual(response.status_code, 400)
+                        self.assertIn('OPENAI_API_KEY', response.json()['error_message'])
         self.assertEqual(self.requests, [])
         self.ollama.assert_not_called()
 
     def test_http_errors_do_not_become_answers(self):
-        for status in (401, 404, 429, 500):
-            with self.subTest(status=status), self.assertLogs('testdb.views.apis', level='ERROR'):
-                self.status = status
-                response = self.generate()
-                self.assertEqual(response.status_code, 502)
-                self.assertTrue(response.json()['error'])
-                self.assertIn(str(status), response.json()['error_message'])
+        for endpoint in (self.generate, self.chat):
+            for stream in (False, True):
+                for status in (401, 404, 429, 500):
+                    with self.subTest(endpoint=endpoint.__name__, stream=stream, status=status), self.assertLogs('testdb.views.apis', level='ERROR'):
+                        self.status = status
+                        response = endpoint(stream=stream)
+                        if stream:
+                            data = [json.loads(line) for line in response.streaming_content][-1]
+                            self.assertTrue(data['done'])
+                        else:
+                            self.assertEqual(response.status_code, 502)
+                            data = response.json()
+                        self.assertTrue(data['error'])
+                        self.assertIn(f'HTTP {status}', data['error_message'])
 
     def test_failed_or_truncated_stream_never_yields_success(self):
-        for events in (
-            [{'type': 'response.output_text.delta', 'delta': 'partial'}],
-            [{'type': 'response.failed'}], [{'type': 'response.incomplete'}],
-            [{'type': 'error'}], [{'type': 'response.refusal.delta'}],
-        ):
-            with self.subTest(events=events), self.assertLogs('testdb.views.apis', level='ERROR'):
-                self.events = events
-                response = self.generate(stream=True)
-                data = [json.loads(line) for line in response.streaming_content]
-                self.assertTrue(data[-1]['error'])
-                self.assertFalse(any(event.get('type') == 'done' for event in data))
+        for endpoint in (self.generate, self.chat):
+            for events, message in (
+                ([{'type': 'response.output_text.delta', 'delta': 'partial'}], 'OpenAI stream ended before completion.'),
+                ([{'type': 'response.failed'}], 'OpenAI generation failed or was incomplete.'),
+                ([{'type': 'response.incomplete'}], 'OpenAI generation failed or was incomplete.'),
+                ([{'type': 'error'}], 'OpenAI generation failed or was incomplete.'),
+                ([{'type': 'response.refusal.delta'}], 'OpenAI declined this request.'),
+            ):
+                with self.subTest(endpoint=endpoint.__name__, events=events), self.assertLogs('testdb.views.apis', level='ERROR'):
+                    self.events = events
+                    response = endpoint(stream=True)
+                    data = [json.loads(line) for line in response.streaming_content]
+                    self.assertTrue(data[-1]['error'])
+                    self.assertEqual(data[-1]['error_message'], message)
+                    self.assertFalse(any(event.get('type') == 'done' for event in data))
+
+    def test_unexpected_exceptions_keep_generic_error_messages(self):
+        for endpoint in (self.generate, self.chat):
+            for stream in (False, True):
+                with self.subTest(endpoint=endpoint.__name__, stream=stream):
+                    with patch.object(OpenAIResponsesClient, '_client', side_effect=RuntimeError('private internal detail')):
+                        with self.assertLogs('testdb.views.apis', level='ERROR'):
+                            response = endpoint(stream=stream)
+                            if stream:
+                                data = [json.loads(line) for line in response.streaming_content][-1]
+                            else:
+                                self.assertEqual(response.status_code, 500)
+                                data = response.json()
+                    self.assertTrue(data['error'])
+                    self.assertNotIn('private internal detail', data['error_message'])
 
     def test_empty_incomplete_and_refusal_responses_raise(self):
         for payload in (
