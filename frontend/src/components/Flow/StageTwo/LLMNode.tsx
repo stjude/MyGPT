@@ -11,13 +11,7 @@ const stateKey = 'seLLMNodeState';
 const LLMNode = ({ data }: any) => {
     const [collapsed, setCollapsed] = useState(false);
 
-    const [llmOptions, setLlmOptions] = useState([
-        ...new Set([
-            ...defaultSettings.llms,
-            ...data.currentSettings.llms,
-            data.currentSettings.defaultLlm
-        ])
-    ]);
+    const [llmOptions, setLlmOptions] = useState<string[]>(data.currentSettings.llms || defaultSettings.llms);
 
     useEffect(() => {
         const abortController = new AbortController();
@@ -25,7 +19,7 @@ const LLMNode = ({ data }: any) => {
         const fetchOllamaLLMs = async () => {
             try {
                 const ollamaLlms = await fetchAndRegisterOllamaModels(data.currentSettings, abortController.signal);
-                setLlmOptions((prev) => [...new Set([...prev, ...ollamaLlms])]);
+                setLlmOptions(ollamaLlms);
             } catch (error) {
                 if (error instanceof Error && error.name === 'AbortError') return;
                 console.error('Failed to fetch Ollama models:', error);
@@ -41,19 +35,26 @@ const LLMNode = ({ data }: any) => {
         try {
             const saved = localStorage.getItem(stateKey)
             if (saved) {
-                return JSON.parse(saved)
+                const parsed = JSON.parse(saved)
+                if (llmOptions.includes(parsed.selectedLlm)) return parsed
             }
         } catch (error) {
             console.error('Failed to parse uploadNodeData from localStorage:', error)
         }
 
         return {
-            selectedLlm: data.currentSettings.defaultLlm || 'llama3:latest'
+            selectedLlm: data.currentSettings.defaultLlm || defaultSettings.defaultLlm
         }
     }
 
     const initialData = getInitialUploadNodeData()
     const [selectedLlm, setSelectedLlm] = useState(initialData.selectedLlm)
+
+    useEffect(() => {
+        if (llmOptions.length && !llmOptions.includes(selectedLlm)) {
+            setSelectedLlm(llmOptions.includes(data.currentSettings.defaultLlm) ? data.currentSettings.defaultLlm : llmOptions[0])
+        }
+    }, [llmOptions, selectedLlm, data.currentSettings.defaultLlm])
 
     useEffect(() => {
         // localStorage.setItem(

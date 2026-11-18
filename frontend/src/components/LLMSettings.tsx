@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isOpenAIModel, openAILlms } from '../utils/DefaultState'
 
 const LLMSettings = (props: {
 	llms:any, 
@@ -9,7 +10,10 @@ const LLMSettings = (props: {
 }) => {
 	
 	let currentSettings = props.currentSettings
-	let llmsDownload = ['llama3.1:latest', 'llama3:latest', 'Mistral:latest', 'Vicuna:latest', 'Orca-mini:latest', 'Gemma2:latest', 'Tinyllama:latest', 'Llama2:13b', 'Llama3:70b']
+	const llms = currentSettings.model_provider === 'openai'
+		? openAILlms
+		: props.llms.filter((model: string) => !isOpenAIModel(model))
+	let llmsDownload = (currentSettings.model_provider === 'openai' ? [] : ['llama3.1:latest', 'llama3:latest', 'Mistral:latest', 'Vicuna:latest', 'Orca-mini:latest', 'Gemma2:latest', 'Tinyllama:latest', 'Llama2:13b', 'Llama3:70b'])
 		.filter((llm:string) => !props.llms.includes(llm.toLowerCase()))
 	const [llmToLoad, setLlmToLoad] = useState('')
 	const [message, setMessage] = useState('')
@@ -194,7 +198,7 @@ const LLMSettings = (props: {
 				<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> Available LLMs on system </div>
 				<div className='text-nav dark:text-nav-dark px-4 flex justify-start'>
 					<ul className='list-disc'>
-						{props.llms.map((llm:string, index:number) => {
+						{llms.map((llm:string, index:number) => {
 							return(
 								<li key={index} className='ml-4'>
 									<div className='flex justify-between m-1 text-nav dark:text-nav-dark'>
@@ -221,7 +225,7 @@ const LLMSettings = (props: {
 				</div>
 			</div>
 			{ 
-				currentSettings.restriction_without_login ? <></> :
+				currentSettings.restriction_without_login || currentSettings.model_provider === 'openai' ? <></> :
 				<div className='flex flex-col justify-start my-4'>
 					<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> LLMs ready to download </div>
 					{ 

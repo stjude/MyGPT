@@ -1,13 +1,13 @@
 # MyGPT Backend
 
-The backend is a Django and Django REST Framework application. It serves the MyGPT API, stores datasets and conversation records in PostgreSQL, and connects to Ollama and the vector database for retrieval and model operations.
+The backend is a Django and Django REST Framework application. It serves the MyGPT API, stores datasets and conversation records in PostgreSQL, and connects to OpenAI, Ollama, and the vector database for retrieval and model operations.
 
 ## Requirements
 
 - Docker Desktop with Docker Compose
 - A repository-root `.env_backend` file, created from `.env_backend.example`
 - A repository-root `.env_frontend` file for the full application Compose setup
-- Ollama running on the host if you need model-backed endpoints; the Compose backend defaults to `http://host.docker.internal:11434`
+- A non-empty OpenAI API key for OpenAI mode, or an accessible Ollama server for local mode. If `OPENAI_API_KEY` is missing or blank, MyGPT defaults to Ollama.
 
 Create the ignored environment files from the repository root if they do not already exist:
 
@@ -17,6 +17,14 @@ cp .env_frontend.example .env_frontend
 ```
 
 Set secure database and Django values in `.env_backend`. Do not commit either environment file, and do not put secrets in `.env_frontend`; `VITE_` values are exposed to browser clients.
+
+Set `OLLAMA_SERVER` in `.env_backend` to the server URL reachable from the
+backend container, for example `OLLAMA_SERVER=https://your-ollama-server.example.org`.
+The backend uses this URL for model listing, generation, and embeddings; a
+frontend URL setting does not override it. The root Compose configuration reads
+this value from `.env_backend`. After changing it, apply the new value with
+`docker compose up -d --no-deps --force-recreate backend`; a container restart
+alone does not reload environment files.
 
 ## Configure backend secrets
 
@@ -39,6 +47,45 @@ After copying `.env_backend.example`, open the repository-root `.env_backend` in
 - **`HUGGINGFACE_API_KEY`** is a Hugging Face user access token. Sign in at [Hugging Face access tokens](https://huggingface.co/settings/tokens), select **New token**, and give it a name such as `MyGPT`. A **Read** token is sufficient for downloading models your account can access. For hosted embedding inference, create a **Fine-grained** token with **Make calls to Inference Providers** permission, as required by the [feature-extraction API](https://huggingface.co/docs/inference-providers/tasks/feature-extraction). Grant model read access only where needed; repository write permission is not needed. Copy the token into `HUGGINGFACE_API_KEY=<your-token>`. For gated models, your account must also obtain access on the model's page. This token is used for Hugging Face embeddings, not local Ollama models.
 
 Keep both values only in `.env_backend`, never in `.env_frontend`, screenshots, or shared messages. Also replace the default `POSTGRES_PASSWORD` with a strong, unique database password before deploying. Save the file before starting containers; if containers are already running, recreate them to apply changed environment values.
+
+## OpenAI embeddings (optional)
+
+When `OPENAI_API_KEY` is non-empty, the model pickers show only OpenAI LLMs and embeddings. This setup is the same on macOS, Windows, Linux, and server deployments.
+
+1. Create a secret key at [OpenAI API keys](https://platform.openai.com/api-keys). Enable API billing and grant permission to create embeddings. A ChatGPT subscription does not include API usage.
+2. Set `OPENAI_API_KEY=<your-key>` in the root `.env_backend` file (see `.env_backend.example`). Leave it blank only if both your LLM and embeddings are local. Never put this key in `.env_frontend`, a `VITE_` variable, or source control.
+3. Build the updated backend and frontend, then recreate the containers to load the code and environment changes:
+
+   ```bash
+   docker compose up -d --build backend frontend
+   ```
+
+4. In **Upload Documents > Advanced**, select `text-embedding-3-small` (1536 dimensions), `text-embedding-3-large` (3072 dimensions), or `text-embedding-ada-002` (1536 dimensions) in the **Embedding Model** node, then upload the new library. These models are also available when adding a Zotero library. No Ollama download is needed. The backend automatically registers and calibrates the model on first use; this can take longer than subsequent requests.
+
+**Privacy and cost:** Selecting an OpenAI embedding model sends document chunks, retrieval questions, answer text used for scoring, and initial calibration examples to `https://api.openai.com/v1/embeddings`. These are paid API calls and require outbound HTTPS access. Only use this option with data approved for that service. Configure chunk sizes within the selected model's token limits; provider authentication, quota, and input-limit errors are not replaced with local embeddings.
+
+Create a new library and upload its documents to change embedding models. Existing vectors cannot be mixed with vectors from another model, even when their dimensions match. Existing local-library embeddings and the default Ollama model are unchanged. Custom OpenAI embedding model names can also be registered through `api/add_embedding_models/` with `source: "openai"`; cutoff calibration uses the existing backend pipeline rather than fixed guessed values.
+
+## OpenAI LLMs
+
+With a non-empty **`OPENAI_API_KEY`**, MyGPT automatically selects OpenAI mode. The only LLM currently offered is **`gpt-6-luna`** (the default), and embedding choices are **`text-embedding-3-small`** (the default), **`text-embedding-3-large`**, and **`text-embedding-ada-002`**. Ollama model discovery and download controls are skipped/hidden in this mode. The backend calls the OpenAI **Responses API** at `https://api.openai.com/v1/responses`, using the same backend-only key as embeddings.
+
+1. Create a key at [OpenAI API keys](https://platform.openai.com/api-keys), enable API billing, and allow Responses API access. Your project must have access to the selected model; the configured model name does not guarantee availability.
+2. Set `OPENAI_API_KEY=<your-key>` in the root `.env_backend`.
+3. No frontend secret or OpenAI provider setting is needed. The backend exposes only `model_provider` through `api/frontend_settings/`, never the key.
+4. Rebuild and recreate the backend and frontend with `docker compose up -d --build backend frontend`, then reload the browser. Saved selections from the other provider are reset to compatible defaults.
+
+Direct chat, library-grounded generation, no-context comparison answers, translation, and MCP function-call follow-ups use the selected OpenAI LLM. Streaming is translated into the same newline-delimited events used by the UI.
+
+If the key is missing, empty, or whitespace-only, the UI instead shows local/Ollama model choices, defaults to `llama3:latest` and `nomic-embed-text:latest`, and hides OpenAI choices. `VITE_DEFAULT_LLM` can override the local LLM default with an Ollama model name; OpenAI names in that variable do not enable OpenAI mode. `gpt-oss:20b` remains an Ollama model. A non-empty but invalid key still selects OpenAI mode and reports API errors; it does not silently fall back to another provider.
+
+Switch providers by updating `OPENAI_API_KEY`, recreating the backend (`docker compose up -d --no-deps --force-recreate backend`), and reloading the browser. Existing libraries retain their original embedding model and vectors: switching the UI provider does not migrate libraries. Re-upload into a new library to change its embedding provider; an existing local library still requires its original local embedding service.
+
+The existing endpoint names remain compatible: `api/ollama_generate/` and `api/ollama_chat/` automatically route `gpt-6-luna` to OpenAI. API clients can use another OpenAI model with the explicit `openai:` prefix, for example `"model": "openai:your-model-id"`; this prefix is stripped before contacting OpenAI. Generation accepts `prompt` and `system`; chat accepts `messages` and `new_conversation`. Both support `stream: false` as well as streaming.
+
+Ollama-specific `top_k`, `top_p`, `temperature`, and `think` settings are not forwarded to OpenAI, because model support differs. Internal reasoning text is not exposed as UI thinking output. API errors, refusals, and incomplete streams are reported explicitly and are not saved as successful answers or retried with another provider.
+
+**Privacy and cost:** OpenAI LLM use sends prompts, selected document context, chat history, and any tool results to OpenAI. Comparison-answer generation and translation can make additional paid requests. Only use approved data. Requests set `store: false`; this is not a guarantee of zero provider retention, so review your organization's OpenAI data policies. To use the local UI mode instead, clear `OPENAI_API_KEY` and recreate the backend.
 
 ## Run Locally
 
@@ -90,6 +137,21 @@ scores saturate, check that the answer distance cutoffs match the library's
 embedding model and distance metric.
 
 ## Tests
+
+To test an Ollama server directly (bypassing Django), run this from the
+repository root. It requires `curl` and `jq` and prints the answer and total
+request time:
+
+```bash
+bash scripts/test_ollama_direct.sh https://your-ollama-server.example.org llama3:latest
+```
+
+The only arguments are server URL and model, defaulting to
+`http://localhost:11434` and `llama3`. The GPCR activation-pathways question and
+its supplied context are fixed in the script so each server/model test uses
+the same input.
+The script calls `/api/generate` with streaming disabled and exits nonzero on
+HTTP errors, invalid responses, or missing answers.
 
 The backend tests live in `testdb/test_apis_data.py`, `testdb/test_apis_conversations.py`, and `testdb/test_apis_integrations.py`. They use Django `TestCase` and mock external services such as Ollama, YouTube, and embedding utilities.
 

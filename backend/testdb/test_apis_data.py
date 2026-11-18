@@ -184,17 +184,32 @@ class DatasetAPITests(TestCase):
 		self.assertEqual(EmbeddingModel.objects.count(), 2)
 		get_embedding_model_ef.assert_called_once_with('new-embed', True)
 
+	@patch.dict('os.environ', {'OPENAI_API_KEY': ''})
 	def test_frontend_settings_creates_defaults_when_missing(self):
 		response = APIClient().get(reverse('frontend_settings'))
 
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.json()['settings'], {
+			'model_provider': 'ollama',
 			'show_no_context_switch': False,
 			'restriction_without_login': False,
 			'azure_login': False,
 			'django_login': False,
 			'disable_chat_without_login': False,
 		})
+
+	def test_frontend_settings_selects_provider_without_exposing_key(self):
+		for key, provider in (('test-only-key', 'openai'), ('', 'ollama'), ('   ', 'ollama')):
+			with self.subTest(provider=provider, blank=not key.strip()), patch.dict('os.environ', {'OPENAI_API_KEY': key}):
+				response = APIClient().get(reverse('frontend_settings'))
+				self.assertEqual(response.json()['settings']['model_provider'], provider)
+				self.assertNotIn('OPENAI_API_KEY', response.json()['settings'])
+				self.assertNotIn('test-only-key', response.content.decode())
+
+	@patch.dict('os.environ', {}, clear=True)
+	def test_frontend_settings_defaults_to_ollama_when_key_is_absent(self):
+		response = APIClient().get(reverse('frontend_settings'))
+		self.assertEqual(response.json()['settings']['model_provider'], 'ollama')
 
 	@patch('testdb.views.apis.add_demo_dataset')
 	def test_add_demo_dataset_delegates_to_dataset_service(self, add_demo_dataset):

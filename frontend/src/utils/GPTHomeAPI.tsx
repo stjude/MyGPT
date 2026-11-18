@@ -1,3 +1,5 @@
+import { openAILlms } from './DefaultState'
+
 // Shared auth header helper (mirrors SettingsAPI.tsx)
 export const getAuthHeader = (frontendSettings: any): string => {
 	const jwtAccessToken = localStorage.getItem('access')
@@ -18,6 +20,7 @@ export const fetchAndRegisterOllamaModels = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<string[]> => {
+	if (frontendSettings?.model_provider === 'openai') return [...openAILlms]
 	let llms: string[] = []
 	try {
 		let data: { models: any[] }
@@ -28,13 +31,14 @@ export const fetchAndRegisterOllamaModels = async (
 				method: 'GET',
 				signal,
 			})
-			if (!response.ok) return []
+			if (!response.ok) throw new Error('Unable to list Ollama models')
 			data = await response.json()
 		}
 
-		llms = data.models
+		llms = [...new Set<string>(data.models
 			.filter((model: any) => (model.details?.quantization_level ?? model.quantization_level) !== 'F16')
 			.map((model: any) => model.name)
+		)]
 
 		const llms_object = data.models.map((model: any) => ({
 			name: model.name,

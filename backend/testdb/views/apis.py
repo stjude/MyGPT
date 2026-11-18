@@ -1,6 +1,7 @@
 from django.core.files.base import File
 from django.http import StreamingHttpResponse, FileResponse, Http404
 from django.conf import settings
+from django.db import transaction
 from django.utils._os import safe_join
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -24,6 +25,7 @@ import queue
 import threading
 from ollama import Client as OllamaClient, ListResponse
 from django.contrib.auth.models import User
+from .openai_client import OpenAIResponsesClient, OpenAIResponseError, is_openai_model
 
 
 logger = logging.getLogger(__name__)
@@ -231,7 +233,10 @@ def get_context(request):
             skip_highlight = json_request['skip_highlight']
         else:
             skip_highlight = False
-        model_type = Model.objects.get(model_name=model)
+        if is_openai_model(model):
+            model_type, _ = Model.objects.get_or_create(model_name=model, defaults={'model_size': '0'})
+        else:
+            model_type = Model.objects.get(model_name=model)
         dataset_name = json_request['dataset']
         # document_title = json_request['document_title'] if 'document_title' in json_request else ''
         focused_document_titles = json_request['focused_document_titles'] if 'focused_document_titles' in json_request else []
@@ -1192,6 +1197,7 @@ def add_embedding_models(request):
             )
         return Response({'added':True}, content_type="application/json")
 
+@transaction.atomic
 def _register_embedding_model(model_name, model_size, model_source):
     _, created = EmbeddingModel.objects.get_or_create(
         model_name=model_name,
@@ -1218,6 +1224,7 @@ def get_frontend_settings(request):
         # get the latest settings
         frontend_settings = FrontEndSettings.objects.latest('saved_date_time')
         frontend_settings_obj = {
+            'model_provider': 'openai' if os.environ.get('OPENAI_API_KEY', '').strip() else 'ollama',
             'show_no_context_switch': frontend_settings.show_no_context_switch,
             'restriction_without_login': frontend_settings.restriction_without_login,
             'azure_login': frontend_settings.azure_login,
@@ -1528,8 +1535,8 @@ def ollama_generate(request):
             if not model or not re.match(r'^[a-zA-Z0-9_\-:.]+$', model):
                 return Response({'error': True, 'error_message': 'Invalid model name'}, content_type="application/json")
 
-            client = OllamaClient(
-                host = os.environ.get('OLLAMA_SERVER')
+            client = OpenAIResponsesClient() if is_openai_model(model) else OllamaClient(
+                host=os.environ.get('OLLAMA_SERVER')
             )
             
             # Non-streaming path: stream=False
@@ -1564,6 +1571,9 @@ def ollama_generate(request):
                         'response': response.get('response', ''),
                         'thinking': response.get('thinking', '')
                     }, content_type="application/json")
+                except OpenAIResponseError as error:
+                    logger.exception("OpenAI generate request failed")
+                    return Response({'error': True, 'error_message': str(error)}, status=502)
                 except Exception:
                     logger.exception("Ollama generate request failed")
                     return Response({'error': True, 'error_message': 'Model generation failed'}, status=500, content_type="application/json")
@@ -1605,6 +1615,9 @@ def ollama_generate(request):
                     
                     # Signal completion
                     yield json.dumps({'type': 'done', 'content': '', 'done': True}) + '\n'
+                except OpenAIResponseError as error:
+                    logger.exception("Streaming OpenAI generate request failed")
+                    yield json.dumps({'error': True, 'error_message': str(error), 'done': True}) + '\n'
                 except Exception:
                     logger.exception("Streaming Ollama generate request failed")
                     yield json.dumps({'error': True, 'error_message': 'Model generation failed', 'done': True}) + '\n'
@@ -1613,6 +1626,9 @@ def ollama_generate(request):
                 stream_response(),
                 content_type='application/x-ndjson'
             )
+        except OpenAIResponseError as error:
+            logger.exception("OpenAI generation configuration failed")
+            return Response({'error': True, 'error_message': str(error)}, status=400)
         except Exception:
             logger.exception("Invalid Ollama generate request")
             return Response({'error': True, 'error_message': 'Unable to process generation request'}, status=500, content_type="application/json")
@@ -1636,8 +1652,8 @@ def ollama_chat(request):
             if not model or not re.match(r'^[a-zA-Z0-9_\-:.]+$', model):
                 return Response({'error': True, 'error_message': 'Invalid model name'}, content_type="application/json")
 
-            client = OllamaClient(
-                host = os.environ.get('OLLAMA_SERVER')
+            client = OpenAIResponsesClient() if is_openai_model(model) else OllamaClient(
+                host=os.environ.get('OLLAMA_SERVER')
             )
 
             # save the question to the database with the model name and messages
@@ -1715,8 +1731,13 @@ def ollama_chat(request):
                         'thinking': response_thinking,
                         'tool_calls': tool_calls if tool_calls else [],
                     }
+                    if is_openai_model(model):
+                        return_response['openai_output'] = message.get('openai_output', [])
                     
                     return Response(return_response, content_type="application/json")
+                except OpenAIResponseError as error:
+                    logger.exception("OpenAI chat request failed")
+                    return Response({'error': True, 'error_message': str(error)}, status=502)
                 except Exception:
                     logger.exception("Ollama chat request failed")
                     return Response({'error': True, 'error_message': 'Model chat failed'}, status=500, content_type="application/json")
@@ -1747,6 +1768,9 @@ def ollama_chat(request):
                     
                     # Signal completion
                     yield json.dumps({'type': 'done', 'content': '', 'done': True}) + '\n'
+                except OpenAIResponseError as error:
+                    logger.exception("Streaming OpenAI chat request failed")
+                    yield json.dumps({'error': True, 'error_message': str(error), 'done': True}) + '\n'
                 except Exception:
                     logger.exception("Streaming Ollama chat request failed")
                     yield json.dumps({'error': True, 'error_message': 'Model chat failed', 'done': True}) + '\n'
@@ -1755,6 +1779,9 @@ def ollama_chat(request):
                 stream_response(),
                 content_type='application/x-ndjson'
             )
+        except OpenAIResponseError as error:
+            logger.exception("OpenAI chat configuration failed")
+            return Response({'error': True, 'error_message': str(error)}, status=400)
         except Exception:
             logger.exception("Invalid Ollama chat request")
             return Response({'error': True, 'error_message': 'Unable to process chat request'}, status=500, content_type="application/json")

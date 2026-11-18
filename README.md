@@ -55,7 +55,7 @@ ChatGPT has revolutionized creative occupations, but tasks requiring factual bac
 We have divided the MyGPT pipeline architecture into three sections: 
 1. <ins>User interface (UI)</ins>: The UI is the front-end of the pipeline. It is a web application that allows users to interact with the pipeline. The UI is built using ReactJS.
 2. <ins>Backend server</ins>: The backend server is responsible for handling requests from the UI and sending them to the LLM server. The backend server is built using Python Django.
-3. <ins>LLM server</ins>: The LLM server is responsible for generating answers to the questions asked by the user. We are using Ollama for the LLM server.
+3. <ins>LLM provider</ins>: Answers can be generated with the OpenAI Responses API (default: `gpt-6-luna`) or a local Ollama server.
 
 ## Installation
 
@@ -74,6 +74,10 @@ cp .env_frontend.example .env_frontend
 Replace the placeholders in `.env_backend` with secure values and configure public browser settings in `.env_frontend`. These runtime files are injected by Docker Compose, are ignored by Git, and are excluded from Docker build contexts. Never put secrets in `.env_frontend`; variables prefixed with `VITE_` are visible to browser users.
 
 See [Configure backend secrets](./backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY` with the appropriate Hugging Face permissions.
+
+Provider selection is automatic: a non-empty `OPENAI_API_KEY` in `.env_backend` enables only OpenAI LLM and embedding choices, defaulting to **`gpt-6-luna`** and **`text-embedding-3-small`**. A missing, empty, or whitespace-only key enables Ollama mode with local defaults. See [OpenAI setup](./backend/README.md#openai-llms). Recreate the backend after changing the key and reload the browser; the key is never sent to the frontend.
+
+Optional [OpenAI embeddings](./backend/README.md#openai-embeddings-optional) use the same backend-only `OPENAI_API_KEY`. Select `text-embedding-3-small`, `text-embedding-3-large`, or `text-embedding-ada-002` when uploading a new library; no model download is needed. OpenAI requests send input text to OpenAI and incur API charges; use only approved data.
 
 MyGPT can be installed on following environments:
 

@@ -1,96 +1,13 @@
+import { readModelResponse } from './ModelResponse'
+
 export const  OllamaDirectChatStream = async (body:any, setAnswer:any, setThought:any) => {
-	let content = ''
-	let thought = ''
-	let answerReceived = false
 	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_chat/`, {body, method: 'POST'})
-	const reader:any = response.body?.getReader()
-	const decoder = new TextDecoder()
-	let leftover = ''
-
-	while (true) {
-		const { done, value } = await reader.read()
-		if (done) {
-			break;
-		}
-
-		const rawjson = leftover + decoder.decode(value, { stream: true })
-		const lines = rawjson.split('\n')
-		leftover = lines.pop() || ''
-
-		for (const j of lines) {
-			if (!j.trim()) {
-				continue
-			}
-
-			try {
-				const json = JSON.parse(j)
-				if (json.done === true) {
-					answerReceived = true
-					continue
-				}
-
-				const chunk = json.content || ''
-				if (!chunk.length) {
-					continue
-				}
-
-				if (json.type === 'thinking') {
-					if (setThought) {
-						thought += chunk
-						setThought(thought)
-					}
-				} else {
-					content += chunk
-				}
-			} catch {
-				// Skip lines that fail to parse
-				continue
-			}
-		}
-		setAnswer(content)
-	}
-
-	if (leftover.trim().length) {
-		try {
-			const lastJson = JSON.parse(leftover)
-			if (lastJson.done === true) {
-				answerReceived = true
-			} else {
-				const chunk = lastJson.content || ''
-				if (lastJson.type === 'thinking') {
-					if (setThought && chunk.length) {
-						thought += chunk
-						setThought(thought)
-					}
-				} else if (chunk.length) {
-					content += chunk
-					setAnswer(content)
-				}
-			}
-		} catch {
-			// Ignore trailing incomplete JSON if stream ended unexpectedly.
-		}
-	}
-
-	return {content, answerReceived, thought}
+	return readModelResponse(response, true, setAnswer, setThought)
 }
 
 const OllamaDirectChatNoStream = async (body:any, setAnswer:any, setThought:any) => {
-	let content = ''
-	let thought = ''
-	let answerReceived = false
 	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_chat/`, {body, method: 'POST'})
-	const data = await response.json()
-	if (data.content) {
-		content = data.content
-		setAnswer(content)
-		answerReceived = true
-	}
-	if (setThought && data.thinking){
-		thought = data.thinking
-		setThought(thought)
-	}
-	return {content, answerReceived, thought}
+	return readModelResponse(response, false, setAnswer, setThought)
 }
 
 export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, MCPTools:any, MCPClient:any, stream:boolean, returnToolResponse:boolean, setThought:any) => {
@@ -99,6 +16,7 @@ export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, M
 	let toolResponse = ''
 	const response = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/ollama_chat/`, {body, method: 'POST'})
 	const data = await response.json()
+	if (!response.ok || data.error) throw new Error(data.error_message || 'Model tool request failed')
 
 	const toolCalls = Array.isArray(data.tool_calls)
 		? data.tool_calls
@@ -107,6 +25,10 @@ export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, M
 		let body_json = JSON.parse(body)
 		body_json.stream = false
 		let messages = body_json.messages || []
+		messages.push({
+			role: 'assistant', content: data.content || '', tool_calls: toolCalls,
+			...(data.openai_output ? { openai_output: data.openai_output } : {}),
+		})
 		// handle tool calls here
 		for (const call of toolCalls){
 			const callName = call?.function?.name || call?.name
@@ -127,6 +49,7 @@ export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, M
 			if (!toolExists){
 				messages.push({
 					role: 'tool',
+					tool_call_id: call.id,
 					tool_name: callName,
 					content: JSON.stringify({ error: `Tool not found: ${callName}` })
 				})
@@ -138,17 +61,17 @@ export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, M
 				name: callName,
 				arguments: callArgs,
 			})
-			if (result.content && result.content.length > 0){
-				messages.push({
-					role: 'tool',
-					tool_name: callName,
-					content: JSON.stringify(result.content)
-				})
-				toolResponse += JSON.stringify(result.content)
-			}
+			messages.push({
+				role: 'tool',
+				tool_call_id: call.id,
+				tool_name: callName,
+				content: JSON.stringify(result.content || [])
+			})
+			toolResponse += JSON.stringify(result.content || [])
 		}
 		const body_2 = {
 			model: body_json.model,
+			new_conversation: false,
 			options: body_json.options,
 			messages: messages,
 			stream: stream
@@ -166,8 +89,11 @@ export const OllamaChatStreamWithToolSupport = async (body:any, setAnswer:any, M
 			answerReceived = data.answerReceived
 			content = data.content
 		}
+	} else {
+		content = data.content || ''
+		setAnswer(content)
+		answerReceived = content.length > 0
 	}
 	
 	return {content, answerReceived}
 }
-

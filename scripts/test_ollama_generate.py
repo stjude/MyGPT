@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for backend /api/ollama_generate/ endpoint with streaming support.
+Test backend model listing and print the streamed answer to a question.
 
 Usage:
     python test_ollama_generate.py
@@ -368,17 +368,16 @@ def main():
 
     args = parser.parse_args()
 
-    generate_result = {
-        "status": "skipped",
-        "message": "Ollama generate test skipped (uncomment in main to run)"
-    }
+    generate_result = test_ollama_generate(
+        url=args.url,
+        model_name=args.model,
+        question=args.question,
+        timeout=args.timeout,
+    )
 
-    # generate_result = test_ollama_generate(
-    #     url=args.url,
-    #     model_name=args.model,
-    #     question=args.question,
-    #     timeout=args.timeout
-    # )
+    if generate_result["status"] == "success":
+        print("\nFinal answer:\n")
+        print(generate_result["response"])
 
     models_result = test_get_ollama_models(
         url=args.models_url,

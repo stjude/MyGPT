@@ -1,3 +1,14 @@
+export const openAIEmbeddingModels = [
+	'text-embedding-3-small',
+	'text-embedding-3-large',
+	'text-embedding-ada-002',
+]
+
+export const openAILlms = ['gpt-6-luna']
+export const isOpenAIModel = (model: string) => openAILlms.includes(model) || model.startsWith('openai:')
+const configuredLlm = import.meta.env.VITE_DEFAULT_LLM || ''
+const defaultLlm = configuredLlm && !isOpenAIModel(configuredLlm) ? configuredLlm : 'llama3:latest'
+
 const defaultSettings = {
 	showSettings: false,
 	showUpload: false,
@@ -16,9 +27,10 @@ const defaultSettings = {
 		{key: 'developer_api', text: 'Developer / API'},
 	],
 	selectedPanel: 'datasets',
-	llms: [import.meta.env.VITE_DEFAULT_LLM || 'llama3:latest'],
-    defaultLlm: import.meta.env.VITE_DEFAULT_LLM || 'llama3:latest',
-	selectedLlm: import.meta.env.VITE_DEFAULT_LLM || 'llama3:latest',
+	model_provider: 'ollama',
+	llms: [defaultLlm],
+    defaultLlm,
+	selectedLlm: defaultLlm,
     datasets: ['None'],
 	defaultDataset: 'None',
     selectedDataset: 'None',
@@ -103,5 +115,32 @@ const defaultSettings = {
   }
 
   export default defaultSettings;
-	
 
+export const getEmbeddingModels = (settings: { model_provider?: string; embedding_models?: string[] }) =>
+	settings.model_provider === 'openai'
+		? [...openAIEmbeddingModels]
+		: (settings.embedding_models || defaultSettings.embedding_models).filter(model => !openAIEmbeddingModels.includes(model))
+
+export const applyModelProvider = (settings: typeof defaultSettings, provider: string): typeof defaultSettings => {
+	const openai = provider === 'openai'
+	const llms = openai ? [...openAILlms] : (Array.isArray(settings.llms) ? settings.llms : [settings.llms]).filter(model => !isOpenAIModel(model))
+	const fallbackLlm = openai ? openAILlms[0] : defaultLlm
+	const availableEmbeddings = getEmbeddingModels({
+		model_provider: provider,
+		embedding_models: settings.embedding_models,
+	})
+	const embeddingModels = availableEmbeddings.length ? availableEmbeddings : [...defaultSettings.embedding_models]
+	const fallbackEmbedding = openai ? openAIEmbeddingModels[0] : defaultSettings.defaultEmbeddingModel
+	return {
+		...settings,
+		model_provider: provider,
+		llms: llms.length ? llms : [fallbackLlm],
+		defaultLlm: fallbackLlm,
+		selectedLlm: (openai ? llms.includes(settings.selectedLlm) : Boolean(settings.selectedLlm) && !isOpenAIModel(settings.selectedLlm)) ? settings.selectedLlm : fallbackLlm,
+		embedding_models: embeddingModels,
+		defaultEmbeddingModel: fallbackEmbedding,
+		selectedEmbeddingModel: embeddingModels.includes(settings.selectedEmbeddingModel) ? settings.selectedEmbeddingModel : fallbackEmbedding,
+		LLM_server_API_specs: openai ? 'openai' : 'ollama',
+	}
+}
+	
