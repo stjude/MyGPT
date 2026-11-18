@@ -1734,9 +1734,9 @@ def ollama_chat(request):
                         return_response['openai_output'] = message.get('openai_output', [])
                     
                     return Response(return_response, content_type="application/json")
-                except OpenAIResponseError as error:
+                except OpenAIResponseError:
                     logger.exception("OpenAI chat request failed")
-                    return Response({'error': True, 'error_message': str(error)}, status=502)
+                    return Response({'error': True, 'error_message': 'Upstream model request failed'}, status=502)
                 except Exception:
                     logger.exception("Ollama chat request failed")
                     return Response({'error': True, 'error_message': 'Model chat failed'}, status=500, content_type="application/json")
@@ -1767,9 +1767,9 @@ def ollama_chat(request):
                     
                     # Signal completion
                     yield json.dumps({'type': 'done', 'content': '', 'done': True}) + '\n'
-                except OpenAIResponseError as error:
+                except OpenAIResponseError:
                     logger.exception("Streaming OpenAI chat request failed")
-                    yield json.dumps({'error': True, 'error_message': str(error), 'done': True}) + '\n'
+                    yield json.dumps({'error': True, 'error_message': 'Upstream model request failed', 'done': True}) + '\n'
                 except Exception:
                     logger.exception("Streaming Ollama chat request failed")
                     yield json.dumps({'error': True, 'error_message': 'Model chat failed', 'done': True}) + '\n'
