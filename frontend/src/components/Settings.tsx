@@ -214,9 +214,10 @@ const Settings = (props: {
 		}
 		postData().catch(error => {
 			console.warn('Unable to refresh Ollama models:', error)
-			setLlms([...openAILlms])
-			setLlm(openAILlms[0])
-			props.settingsCallback({ ...currentSettings, llms: [...openAILlms], selectedLlm: openAILlms[0] })
+			const llms = [...new Set([...(currentSettings.llms || []), currentSettings.selectedLlm, ...openAILlms].filter(Boolean))]
+			setLlms(llms)
+			setLlm(currentSettings.selectedLlm)
+			props.settingsCallback({ ...currentSettings, llms })
 		})
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [props.user, props.djangoLogin, props.currentSettings.runtimeRevision])
