@@ -68,10 +68,9 @@ describe('Settings', () => {
 
   it('keeps the OpenAI default when no Ollama models are installed', async () => {
     const settingsCallback = vi.fn()
-    render(<Settings {...baseProps} currentSettings={{ ...defaultSettings, selectedLlm: 'gpt-6-luna' }} settingsCallback={settingsCallback} />)
-    await waitFor(() => expect(settingsCallback).toHaveBeenCalledWith(expect.objectContaining({
-      llms: ['gpt-6-luna'], selectedLlm: 'gpt-6-luna',
-    })))
+    render(<Settings {...baseProps} currentSettings={{ ...defaultSettings, model_provider: 'openai', llms: ['gpt-6-luna'], selectedLlm: 'gpt-6-luna' }} settingsCallback={settingsCallback} />)
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    expect(global.fetch.mock.calls.some(([url]) => String(url).includes('/tags'))).toBe(false)
   })
 
   it('renders expected panel tabs', () => {

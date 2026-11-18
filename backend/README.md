@@ -7,7 +7,7 @@ The backend is a Django and Django REST Framework application. It serves the MyG
 - Docker Desktop with Docker Compose
 - A repository-root `.env_backend` file, created from `.env_backend.example`
 - A repository-root `.env_frontend` file for the full application Compose setup
-- An OpenAI API key for the default `gpt-6-luna` LLM, or an accessible Ollama server for local LLMs. Local Ollama embedding models still require Ollama even when answer generation uses OpenAI.
+- A non-empty OpenAI API key for OpenAI mode, or an accessible Ollama server for local mode. If `OPENAI_API_KEY` is missing or blank, MyGPT defaults to Ollama.
 
 Create the ignored environment files from the repository root if they do not already exist:
 
@@ -50,7 +50,7 @@ Keep both values only in `.env_backend`, never in `.env_frontend`, screenshots, 
 
 ## OpenAI embeddings (optional)
 
-OpenAI embeddings can be used with either OpenAI or Ollama answer generation. This setup is the same on macOS, Windows, Linux, and server deployments.
+When `OPENAI_API_KEY` is non-empty, the model pickers show only OpenAI LLMs and embeddings. This setup is the same on macOS, Windows, Linux, and server deployments.
 
 1. Create a secret key at [OpenAI API keys](https://platform.openai.com/api-keys). Enable API billing and grant permission to create embeddings. A ChatGPT subscription does not include API usage.
 2. Set `OPENAI_API_KEY=<your-key>` in the root `.env_backend` file (see `.env_backend.example`). Leave it blank only if both your LLM and embeddings are local. Never put this key in `.env_frontend`, a `VITE_` variable, or source control.
@@ -68,20 +68,24 @@ Create a new library and upload its documents to change embedding models. Existi
 
 ## OpenAI LLMs
 
-The default LLM is **`gpt-6-luna`**. The backend calls the OpenAI **Responses API** at `https://api.openai.com/v1/responses`, using the same backend-only `OPENAI_API_KEY` as embeddings. No additional Python package or Ollama LLM download is needed.
+With a non-empty **`OPENAI_API_KEY`**, MyGPT automatically selects OpenAI mode. The only LLM currently offered is **`gpt-6-luna`** (the default), and embedding choices are **`text-embedding-3-small`** (the default), **`text-embedding-3-large`**, and **`text-embedding-ada-002`**. Ollama model discovery and download controls are skipped/hidden in this mode. The backend calls the OpenAI **Responses API** at `https://api.openai.com/v1/responses`, using the same backend-only key as embeddings.
 
 1. Create a key at [OpenAI API keys](https://platform.openai.com/api-keys), enable API billing, and allow Responses API access. Your project must have access to the selected model; the configured model name does not guarantee availability.
 2. Set `OPENAI_API_KEY=<your-key>` in the root `.env_backend`.
-3. Set `VITE_DEFAULT_LLM=gpt-6-luna` in the root `.env_frontend`, especially if an existing file overrides the default.
-4. Rebuild and recreate the backend and frontend with `docker compose up -d --build backend frontend`. Existing browser settings are retained; select `gpt-6-luna` in the model picker if you previously selected another model.
+3. No frontend secret or OpenAI provider setting is needed. The backend exposes only `model_provider` through `api/frontend_settings/`, never the key.
+4. Rebuild and recreate the backend and frontend with `docker compose up -d --build backend frontend`, then reload the browser. Saved selections from the other provider are reset to compatible defaults.
 
-Direct chat, library-grounded generation, no-context comparison answers, translation, and MCP function-call follow-ups use the selected OpenAI LLM. Streaming is translated into the same newline-delimited events used by the UI. Ollama models remain selectable, including `gpt-oss:20b`, which is **not** routed to OpenAI. Cloud models remain listed when Ollama discovery is unavailable; using local embeddings still requires their local provider.
+Direct chat, library-grounded generation, no-context comparison answers, translation, and MCP function-call follow-ups use the selected OpenAI LLM. Streaming is translated into the same newline-delimited events used by the UI.
+
+If the key is missing, empty, or whitespace-only, the UI instead shows local/Ollama model choices, defaults to `llama3:latest` and `nomic-embed-text:latest`, and hides OpenAI choices. `VITE_DEFAULT_LLM` can override the local LLM default with an Ollama model name; OpenAI names in that variable do not enable OpenAI mode. `gpt-oss:20b` remains an Ollama model. A non-empty but invalid key still selects OpenAI mode and reports API errors; it does not silently fall back to another provider.
+
+Switch providers by updating `OPENAI_API_KEY`, recreating the backend (`docker compose up -d --no-deps --force-recreate backend`), and reloading the browser. Existing libraries retain their original embedding model and vectors: switching the UI provider does not migrate libraries. Re-upload into a new library to change its embedding provider; an existing local library still requires its original local embedding service.
 
 The existing endpoint names remain compatible: `api/ollama_generate/` and `api/ollama_chat/` automatically route `gpt-6-luna` to OpenAI. API clients can use another OpenAI model with the explicit `openai:` prefix, for example `"model": "openai:your-model-id"`; this prefix is stripped before contacting OpenAI. Generation accepts `prompt` and `system`; chat accepts `messages` and `new_conversation`. Both support `stream: false` as well as streaming.
 
 Ollama-specific `top_k`, `top_p`, `temperature`, and `think` settings are not forwarded to OpenAI, because model support differs. Internal reasoning text is not exposed as UI thinking output. API errors, refusals, and incomplete streams are reported explicitly and are not saved as successful answers or retried with another provider.
 
-**Privacy and cost:** OpenAI LLM use sends prompts, selected document context, chat history, and any tool results to OpenAI. Comparison-answer generation and translation can make additional paid requests. Only use approved data. Requests set `store: false`; this is not a guarantee of zero provider retention, so review your organization's OpenAI data policies. To run locally instead, select an Ollama model and set `VITE_DEFAULT_LLM` to its name before rebuilding.
+**Privacy and cost:** OpenAI LLM use sends prompts, selected document context, chat history, and any tool results to OpenAI. Comparison-answer generation and translation can make additional paid requests. Only use approved data. Requests set `store: false`; this is not a guarantee of zero provider retention, so review your organization's OpenAI data policies. To use the local UI mode instead, clear `OPENAI_API_KEY` and recreate the backend.
 
 ## Run Locally
 

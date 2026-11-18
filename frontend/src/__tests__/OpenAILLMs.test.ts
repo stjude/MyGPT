@@ -3,7 +3,7 @@ import { readModelResponse } from '../utils/ModelResponse'
 import { fetchAndRegisterOllamaModels } from '../utils/GPTHomeAPI'
 import { fetchAndRegisterOllamaModels as fetchSettingsModels } from '../utils/SettingsAPI'
 import { OllamaChatStreamWithToolSupport } from '../utils/OllamaChat'
-import { isOpenAIModel } from '../utils/DefaultState'
+import defaultSettings, { isOpenAIModel, applyModelProvider, openAIEmbeddingModels } from '../utils/DefaultState'
 
 afterEach(() => {
 	vi.unstubAllGlobals()
@@ -63,13 +63,45 @@ describe('OpenAI model responses', () => {
 		}
 	})
 
-	it('keeps the cloud default selectable when Ollama cannot be reached', async () => {
-		vi.spyOn(console, 'warn').mockImplementation(() => {})
-		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Ollama offline')))
-		expect(await fetchAndRegisterOllamaModels(null)).toEqual(['gpt-6-luna'])
+	it('does not contact Ollama when OpenAI is enabled', async () => {
+		const fetch = vi.fn().mockResolvedValue(Response.json({ settings: { model_provider: 'openai' } }))
+		vi.stubGlobal('fetch', fetch)
+		expect(await fetchAndRegisterOllamaModels({ model_provider: 'openai' })).toEqual(['gpt-6-luna'])
+		expect(fetch).not.toHaveBeenCalled()
 		expect(await fetchSettingsModels(null, false)).toEqual({
 			llms: ['gpt-6-luna'], llm: 'gpt-6-luna',
 		})
+		expect(fetch).toHaveBeenCalledTimes(1)
+	})
+
+	it('does not show OpenAI models when Ollama mode is offline', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Ollama offline')))
+		expect(await fetchAndRegisterOllamaModels({ model_provider: 'ollama' })).toEqual([])
+	})
+
+	it('resets incompatible saved LLM and embedding selections on provider changes', () => {
+		const cloud = applyModelProvider(defaultSettings, 'openai')
+		expect(cloud.llms).toEqual(['gpt-6-luna'])
+		expect(cloud.selectedLlm).toBe('gpt-6-luna')
+		expect(cloud.selectedEmbeddingModel).toBe('text-embedding-3-small')
+		expect(cloud.embedding_models).toEqual(openAIEmbeddingModels)
+		const local = applyModelProvider(cloud, 'ollama')
+		expect(local.selectedLlm).not.toBe('gpt-6-luna')
+		expect(local.selectedEmbeddingModel).toBe('nomic-embed-text:latest')
+		expect(local.embedding_models.some(model => openAIEmbeddingModels.includes(model))).toBe(false)
+		expect(local.LLM_server_API_specs).toBe('ollama')
+	})
+
+	it('preserves local model selections and custom embedding choices in Ollama mode', () => {
+		const settings = {
+			...defaultSettings, llms: ['gpt-oss:20b'], selectedLlm: 'gpt-oss:20b',
+			embedding_models: ['custom-local-embedding'], selectedEmbeddingModel: 'custom-local-embedding',
+		}
+		const local = applyModelProvider(settings, 'ollama')
+		expect(local.selectedLlm).toBe('gpt-oss:20b')
+		expect(local.embedding_models).toEqual(['custom-local-embedding'])
+		expect(local.selectedEmbeddingModel).toBe('custom-local-embedding')
 	})
 
 	it('preserves function call IDs and encrypted output through the tool follow-up', async () => {

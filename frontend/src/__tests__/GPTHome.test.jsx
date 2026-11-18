@@ -31,6 +31,7 @@ vi.mock('react-pdf', () => ({
 }))
 
 const default_frontend_settings = {
+  model_provider: 'ollama',
   'show_no_context_switch': true,
   'azure_login': false, 
   'django_login': false,
@@ -214,7 +215,7 @@ describe('GPTHome', () => {
     globalThis.fetch = vi.fn()
 
     try {
-      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['gpt-6-luna', 'llama3:latest'])
+      expect(await fetchAndRegisterOllamaModels(null)).toEqual(['llama3:latest'])
       expect(window.electronAPI.getOllamaStatus).toHaveBeenCalledOnce()
       expect(globalThis.fetch).not.toHaveBeenCalled()
     } finally {
@@ -237,7 +238,7 @@ describe('GPTHome', () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Backend unavailable'))
 
     try {
-      expect(await fetchAndRegisterOllamaModels({ django_login: false })).toEqual(['gpt-6-luna', 'llama3:latest'])
+      expect(await fetchAndRegisterOllamaModels({ django_login: false })).toEqual(['llama3:latest'])
     } finally {
       window.electronAPI = electronAPI
       globalThis.fetch = fetch

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { DropdownOptions } from './DropDownMenu'
-import defaultSettings, { openAIEmbeddingModels } from '../utils/DefaultState'
+import defaultSettings, { getEmbeddingModels } from '../utils/DefaultState'
 
 const AddLibrarySettings = (props: {
 	currentSettings: any,
@@ -12,10 +12,7 @@ const AddLibrarySettings = (props: {
 	const stateKey = 'upUploadNodeState';
 	const emptyUploadDocs:any = Array.from(Array(40).keys()).map((x: any) => { return { title: '', file: null } })
 	const safeCurrentSettings = props.currentSettings || {}
-	const embeddingModels = [...new Set([
-		...(safeCurrentSettings.embedding_models || defaultSettings.embedding_models),
-		...openAIEmbeddingModels,
-	])]
+	const embeddingModels = getEmbeddingModels(safeCurrentSettings)
 	const getInitialUploadNodeData = () => {
 		if (safeCurrentSettings.libraryName || safeCurrentSettings.docs || safeCurrentSettings.languageOfDocs) {
 			           return {

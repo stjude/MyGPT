@@ -12,7 +12,7 @@ import {
 import MCPClient from './MCPClient'
 import FlowSettings from './FlowSettings'
 import DeveloperAPISettings from './DeveloperAPISettings'
-import { openAILlms } from '../utils/DefaultState'
+import { openAILlms, getEmbeddingModels } from '../utils/DefaultState'
 
 const Settings = (props: {
 	closeSettings: any,
@@ -166,14 +166,19 @@ const Settings = (props: {
 	useEffect(() => {
 
 		const postData = async () => {
+			if (currentSettings.model_provider === 'openai') {
+				setLlms([...openAILlms])
+				setLlm(openAILlms[0])
+				return
+			}
 			const response = await fetch(`${window.mygptRuntimeConfig.ollamaApiUrl}api/tags`, { method: 'GET' })
 			const data = await response.json()
 
 			// set models
-			const llms = [...new Set([...openAILlms, ...data.models
+			const llms = [...new Set<string>(data.models
 				.filter((model: any) => model.details.quantization_level !== 'F16')
 				.map((model: any) => model.name)
-			])]
+			)]
 			const llm = llms[0]
 			setLlms(llms)
 			setLlm(llm)
@@ -220,7 +225,7 @@ const Settings = (props: {
 			props.settingsCallback({ ...currentSettings, llms })
 		})
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [props.user, props.djangoLogin, props.currentSettings.runtimeRevision])
+	}, [props.user, props.djangoLogin, props.currentSettings.runtimeRevision, props.currentSettings.model_provider])
 
 	const settingProps = {
 		defaultSettings: props.defaultSettings,
@@ -541,7 +546,7 @@ const Settings = (props: {
 							{
 								activeTab === 'embedding_models' ?
 									<EmbeddingSettings
-										embeddingModels={props.defaultSettings.embedding_models}
+										embeddingModels={getEmbeddingModels(currentSettings)}
 										embeddingModel={currentSettings.embeddingModel}
 										selectedEmbeddingModel={props.currentSettings.selectedEmbeddingModel}
 										currentSettings={currentSettings}
@@ -899,7 +904,7 @@ const Settings = (props: {
 							{
 								activeTab === 'embedding_models' ?
 									<EmbeddingSettings
-										embeddingModels={props.defaultSettings.embedding_models}
+										embeddingModels={getEmbeddingModels(currentSettings)}
 										embeddingModel={currentSettings.embeddingModel}
 										selectedEmbeddingModel={props.currentSettings.selectedEmbeddingModel}
 										currentSettings={currentSettings}

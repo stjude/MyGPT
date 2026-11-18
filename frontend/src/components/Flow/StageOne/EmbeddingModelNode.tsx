@@ -4,14 +4,12 @@ import {
     Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import defaultSettings from '../../../utils/DefaultState'
+import defaultSettings, { getEmbeddingModels } from '../../../utils/DefaultState'
 
 const stateKey = 'upEmbeddingModelNodeState';
 const EmbeddingModelNode = ({ data }: any) => {
     const [collapsed, setCollapsed] = useState(false);
-    const [modelOptions] = useState([
-        ...defaultSettings.embedding_models,
-    ]);
+    const modelOptions = getEmbeddingModels(data.currentSettings);
 
     const getInitialUploadNodeData = () => {
         try {
@@ -24,15 +22,21 @@ const EmbeddingModelNode = ({ data }: any) => {
         }
 
         return {
-            selectedEmbeddingModel: 'nomic-embed-text:latest',
+            selectedEmbeddingModel: data.currentSettings.selectedEmbeddingModel || defaultSettings.selectedEmbeddingModel,
             distanceFn: 'l2'
         }
     }
 
     const initialData = getInitialUploadNodeData()
 
-    const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState(initialData.selectedEmbeddingModel)
+    const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState(
+        modelOptions.includes(initialData.selectedEmbeddingModel) ? initialData.selectedEmbeddingModel : modelOptions[0]
+    )
     const [distanceFn, setDistanceFn] = useState(initialData.distanceFn)
+
+    useEffect(() => {
+        if (!modelOptions.includes(selectedEmbeddingModel)) setSelectedEmbeddingModel(modelOptions[0])
+    }, [data.currentSettings.model_provider, selectedEmbeddingModel])
 
     useEffect(() => {
         // localStorage.setItem(

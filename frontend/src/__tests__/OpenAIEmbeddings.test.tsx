@@ -3,13 +3,13 @@ import { vi } from 'vitest'
 import { ReactFlowProvider } from '@xyflow/react'
 import AddLibrarySettings from '../components/AddLibrarySettings'
 import EmbeddingModelNode from '../components/Flow/StageOne/EmbeddingModelNode'
-import defaultSettings, { openAIEmbeddingModels } from '../utils/DefaultState'
+import defaultSettings, { openAIEmbeddingModels, applyModelProvider } from '../utils/DefaultState'
 
 describe('OpenAI embedding selection', () => {
-	it('keeps the existing local default and includes OpenAI models', () => {
+	it('keeps the local default without OpenAI models until OpenAI is enabled', () => {
 		expect(defaultSettings.selectedEmbeddingModel).toBe('nomic-embed-text:latest')
 		for (const model of openAIEmbeddingModels) {
-			expect(defaultSettings.embedding_models).toContain(model)
+			expect(defaultSettings.embedding_models).not.toContain(model)
 		}
 	})
 
@@ -20,6 +20,7 @@ describe('OpenAI embedding selection', () => {
 			<AddLibrarySettings
 				currentSettings={{
 					...defaultSettings,
+					model_provider: 'openai',
 					embedding_models: ['nomic-embed-text:latest', 'text-embedding-3-small'],
 				}}
 				settingsCallback={settingsCallback}
@@ -32,7 +33,7 @@ describe('OpenAI embedding selection', () => {
 		if (!select) throw new Error('Embedding model selector not found')
 		expect(Array.from(select.options).filter(option => option.value === 'text-embedding-3-small')).toHaveLength(1)
 		expect(Array.from(select.options).map(option => option.value)).toEqual([
-			'nomic-embed-text:latest', ...openAIEmbeddingModels,
+			...openAIEmbeddingModels,
 		])
 
 		fireEvent.change(select, { target: { value: 'text-embedding-3-large' } })
@@ -48,7 +49,7 @@ describe('OpenAI embedding selection', () => {
 			<ReactFlowProvider>
 				<EmbeddingModelNode data={{
 					title: 'Embedding Model',
-					currentSettings: defaultSettings,
+					currentSettings: applyModelProvider(defaultSettings, 'openai'),
 					settingsCallback,
 				}} />
 			</ReactFlowProvider>

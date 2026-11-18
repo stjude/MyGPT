@@ -20,7 +20,8 @@ export const fetchAndRegisterOllamaModels = async (
 	frontendSettings: any,
 	signal?: AbortSignal
 ): Promise<string[]> => {
-	let llms: string[] = [...openAILlms]
+	if (frontendSettings?.model_provider === 'openai') return [...openAILlms]
+	let llms: string[] = []
 	try {
 		let data: { models: any[] }
 		if (window.electronAPI?.isDesktop) {
@@ -34,10 +35,10 @@ export const fetchAndRegisterOllamaModels = async (
 			data = await response.json()
 		}
 
-		llms = [...new Set([...openAILlms, ...data.models
+		llms = [...new Set<string>(data.models
 			.filter((model: any) => (model.details?.quantization_level ?? model.quantization_level) !== 'F16')
 			.map((model: any) => model.name)
-		])]
+		)]
 
 		const llms_object = data.models.map((model: any) => ({
 			name: model.name,

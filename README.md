@@ -75,7 +75,7 @@ Replace the placeholders in `.env_backend` with secure values and configure publ
 
 See [Configure backend secrets](./backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY` with the appropriate Hugging Face permissions.
 
-The default LLM is **`gpt-6-luna`**, using the [OpenAI Responses API](./backend/README.md#openai-llms). Set `OPENAI_API_KEY` in `.env_backend` and `VITE_DEFAULT_LLM=gpt-6-luna` in `.env_frontend`, then rebuild/recreate the containers. Ollama models remain selectable for local generation.
+Provider selection is automatic: a non-empty `OPENAI_API_KEY` in `.env_backend` enables only OpenAI LLM and embedding choices, defaulting to **`gpt-6-luna`** and **`text-embedding-3-small`**. A missing, empty, or whitespace-only key enables Ollama mode with local defaults. See [OpenAI setup](./backend/README.md#openai-llms). Recreate the backend after changing the key and reload the browser; the key is never sent to the frontend.
 
 Optional [OpenAI embeddings](./backend/README.md#openai-embeddings-optional) use the same backend-only `OPENAI_API_KEY`. Select `text-embedding-3-small`, `text-embedding-3-large`, or `text-embedding-ada-002` when uploading a new library; no model download is needed. OpenAI requests send input text to OpenAI and incur API charges; use only approved data.
 

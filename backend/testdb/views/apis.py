@@ -1224,6 +1224,7 @@ def get_frontend_settings(request):
         # get the latest settings
         frontend_settings = FrontEndSettings.objects.latest('saved_date_time')
         frontend_settings_obj = {
+            'model_provider': 'openai' if os.environ.get('OPENAI_API_KEY', '').strip() else 'ollama',
             'show_no_context_switch': frontend_settings.show_no_context_switch,
             'restriction_without_login': frontend_settings.restriction_without_login,
             'azure_login': frontend_settings.azure_login,

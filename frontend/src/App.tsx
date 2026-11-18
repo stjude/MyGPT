@@ -4,7 +4,7 @@ import TopNav from './components/TopNav'
 import GPTHome from './components/GPTHome'
 import Settings from './components/Settings'
 import UploadMenu from './components/UploadMenu'
-import defaultSettings from './utils/DefaultState'
+import defaultSettings, { applyModelProvider } from './utils/DefaultState'
 import ChatHistory from './components/ChatHistory'
 import Disclaimer from './components/Disclaimer'
 import FAQ from './components/FAQ'
@@ -43,7 +43,7 @@ function App() {
 
   const settingsCallback = (newSettings:any) => {
     newSettings.restriction_without_login = frontendSettings.restriction_without_login
-    setCurrentSettings(newSettings)
+    setCurrentSettings(applyModelProvider(newSettings, frontendSettings.model_provider || 'ollama'))
     if (newSettings.showSettings){
       setShowSettings(newSettings.showSettings)
     }
@@ -89,6 +89,7 @@ function App() {
 			.then(response => response.json())
 			.then(data => {
 				setFrontendSettings(data.settings)
+        setCurrentSettings(settings => applyModelProvider(settings, data.settings.model_provider || 'ollama'))
         if (data.settings.django_login)
           setShowDisclaimer(true)
 			})
@@ -127,13 +128,13 @@ function App() {
           .then(response => response.json())
           .then(data => {
             const datasets = data.map((d:any) => d.dataset_name)
-            setCurrentSettings({
-              ...currentSettings,
+            setCurrentSettings(settings => ({
+              ...settings,
               datasets: datasets.length ? datasets : ['None'],
               selectedDataset: datasets[0] || 'None',
               fetchDatasets: false,
               datasetsUpdated: false,
-            })
+            }))
           })
           .catch(err => {
             console.warn('get_datasets: backend unreachable', err)
@@ -166,13 +167,13 @@ function App() {
               .then(data => {
                 if (data) {
                   const datasets = data.map((d:any) => d.dataset_name)
-                  setCurrentSettings({
-                    ...currentSettings,
+                  setCurrentSettings(settings => ({
+                    ...settings,
                     datasets: datasets.length ? datasets : ['None'],
                     selectedDataset: datasets[0] || 'None',
                     fetchDatasets: false,
                     datasetsUpdated: false,
-                  })
+                  }))
                 }
             })
             .catch(err => {

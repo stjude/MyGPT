@@ -126,6 +126,10 @@ export const fetchAndRegisterOllamaModels = async (
 	djangoLogin: any,
 	signal?: AbortSignal
 ): Promise<{ llms: string[]; llm: string }> => {
+	const settingsResponse = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/frontend_settings/?format=json`, { signal })
+	if (!settingsResponse.ok) throw new Error('Unable to determine model provider')
+	const { settings } = await settingsResponse.json()
+	if (settings.model_provider === 'openai') return { llms: [...openAILlms], llm: openAILlms[0] }
 	let models: any[]
 	try {
 		const tagsResponse = await fetch(`${window.mygptRuntimeConfig.backendApiUrl}api/get_ollama_models/`, {
@@ -137,14 +141,14 @@ export const fetchAndRegisterOllamaModels = async (
 		models = data.models
 	} catch (error) {
 		if (error instanceof Error && error.name === 'AbortError') throw error
-		console.warn('Unable to list Ollama models; OpenAI models remain available', error)
-		return { llms: [...openAILlms], llm: openAILlms[0] }
+		console.warn('Unable to list Ollama models', error)
+		return { llms: [], llm: '' }
 	}
 
-	const llms: string[] = [...new Set([...openAILlms, ...models
+	const llms: string[] = [...new Set<string>(models
 		.filter((model: any) => model.quantization_level !== 'F16')
 		.map((model: any) => model.name)
-	])]
+	)]
 
 	const llms_object = models.map((model: any) => ({
 		name: model.name,

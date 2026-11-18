@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getEmbeddingModels } from '../utils/DefaultState'
 
 const EmbeddingSettings = (props: {
 	embeddingModels:any, 
@@ -11,7 +12,8 @@ const EmbeddingSettings = (props: {
 }) => {
 	
 	let currentSettings = props.currentSettings
-	let embeddingModelsDownload = ['nomic-embed-text:latest', 'snowflake-arctic-embed:latest', 'bge-m3:latest', 'mxbai-embed-large:latest']
+	const embeddingModels = getEmbeddingModels({ ...currentSettings, embedding_models: props.embeddingModels })
+	let embeddingModelsDownload = currentSettings.model_provider === 'openai' ? [] : ['nomic-embed-text:latest', 'snowflake-arctic-embed:latest', 'bge-m3:latest', 'mxbai-embed-large:latest']
 	const [embeddingModelToLoad, setEmbeddingModelToLoad] = useState('')
 	const [message, setMessage] = useState('')
 	const [modelLoaded, setModelLoaded] = useState(false)
@@ -194,7 +196,7 @@ const EmbeddingSettings = (props: {
 				<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> Available embeddingModels on system </div>
 				<div className='text-nav dark:text-nav-dark px-4 flex justify-start'>
 					<ul className='list-disc'>
-						{props.embeddingModels.map((llm:string, index:number) => {
+						{embeddingModels.map((llm:string, index:number) => {
 							return(
 								<li key={index} className='ml-4'>
 									<div className='flex justify-between m-1 text-nav dark:text-nav-dark'>
@@ -221,7 +223,7 @@ const EmbeddingSettings = (props: {
 				</div>
 			</div>
 			{ 
-				currentSettings.restriction_without_login ? <></> :
+				currentSettings.restriction_without_login || currentSettings.model_provider === 'openai' ? <></> :
 				<div className='flex flex-col justify-start my-4'>
 					<div className='text-nav dark:text-nav-dark px-2 flex justify-start my-2 text-lg font-semibold'> embeddingModels ready to download </div>
 					{ 

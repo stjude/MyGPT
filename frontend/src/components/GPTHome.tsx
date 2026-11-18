@@ -232,9 +232,10 @@ function GPTHome(props:{
 
 	// get llms from backend
 	useEffect(()=>{
+		if (!props.frontendSettings.model_provider) return
 		let isMounted = true
 		const controller = new AbortController()
-		fetchAndRegisterOllamaModels(props.frontendSettings, controller.signal)
+		fetchAndRegisterOllamaModels({ ...props.frontendSettings, model_provider: props.currentSettings.model_provider }, controller.signal)
 			.then(llms => {
 				if (!isMounted) return
 				setLlms(llms)
@@ -249,7 +250,7 @@ function GPTHome(props:{
 			.catch((error) => { if (error?.name !== 'AbortError') console.error(error) })
 		return () => { isMounted = false; controller.abort() }
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	},[props.frontendSettings, props.frontendSettings.django_login, props.currentSettings.runtimeRevision])
+	},[props.frontendSettings, props.frontendSettings.django_login, props.currentSettings.runtimeRevision, props.currentSettings.model_provider])
 
 	// keep dataset language synced with the selected dataset
 	useEffect(() => {
