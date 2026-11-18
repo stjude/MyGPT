@@ -123,7 +123,7 @@ export const getEmbeddingModels = (settings: { model_provider?: string; embeddin
 
 export const applyModelProvider = (settings: typeof defaultSettings, provider: string): typeof defaultSettings => {
 	const openai = provider === 'openai'
-	const llms = openai ? [...openAILlms] : settings.llms.filter(model => !isOpenAIModel(model))
+	const llms = openai ? [...openAILlms] : (Array.isArray(settings.llms) ? settings.llms : [settings.llms]).filter(model => !isOpenAIModel(model))
 	const fallbackLlm = openai ? openAILlms[0] : defaultLlm
 	const availableEmbeddings = getEmbeddingModels({
 		model_provider: provider,
