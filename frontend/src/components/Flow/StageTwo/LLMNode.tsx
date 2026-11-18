@@ -51,7 +51,9 @@ const LLMNode = ({ data }: any) => {
     const [selectedLlm, setSelectedLlm] = useState(initialData.selectedLlm)
 
     useEffect(() => {
-        if (!llmOptions.includes(selectedLlm)) setSelectedLlm(data.currentSettings.defaultLlm || llmOptions[0])
+        if (llmOptions.length && !llmOptions.includes(selectedLlm)) {
+            setSelectedLlm(llmOptions.includes(data.currentSettings.defaultLlm) ? data.currentSettings.defaultLlm : llmOptions[0])
+        }
     }, [llmOptions, selectedLlm, data.currentSettings.defaultLlm])
 
     useEffect(() => {
