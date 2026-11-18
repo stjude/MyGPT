@@ -136,7 +136,7 @@ export const applyModelProvider = (settings: typeof defaultSettings, provider: s
 		model_provider: provider,
 		llms: llms.length ? llms : [fallbackLlm],
 		defaultLlm: fallbackLlm,
-		selectedLlm: llms.includes(settings.selectedLlm) ? settings.selectedLlm : fallbackLlm,
+		selectedLlm: (openai ? llms.includes(settings.selectedLlm) : Boolean(settings.selectedLlm) && !isOpenAIModel(settings.selectedLlm)) ? settings.selectedLlm : fallbackLlm,
 		embedding_models: embeddingModels,
 		defaultEmbeddingModel: fallbackEmbedding,
 		selectedEmbeddingModel: embeddingModels.includes(settings.selectedEmbeddingModel) ? settings.selectedEmbeddingModel : fallbackEmbedding,
