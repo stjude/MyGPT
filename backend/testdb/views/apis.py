@@ -1779,9 +1779,9 @@ def ollama_chat(request):
                 stream_response(),
                 content_type='application/x-ndjson'
             )
-        except OpenAIResponseError:
+        except OpenAIResponseError as error:
             logger.exception("OpenAI chat configuration failed")
-            return Response({'error': True, 'error_message': 'Unable to process chat request'}, status=400)
+            return Response({'error': True, 'error_message': str(error)}, status=400)
         except Exception:
             logger.exception("Invalid Ollama chat request")
             return Response({'error': True, 'error_message': 'Unable to process chat request'}, status=500, content_type="application/json")
