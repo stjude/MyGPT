@@ -48,7 +48,7 @@ function GPTHome(props:{
 		console.error('Model generation failed', error)
 		setGenerationError(error instanceof Error ? error.message : 'Model generation failed')
 	}
-	useEffect(() => { setGenerationError('') }, [query])
+	useEffect(() => { setGenerationError('') }, [query, props.currentSettings.selectedLlm])
 	const [minimizedThinking, setMinimizedThinking] = useState(false)
 	const [nullAnswer, setNullAnswer] = useState<any>('')
 	const [nullThought, setNullThought] = useState<any>('')
