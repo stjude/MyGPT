@@ -8,153 +8,87 @@ To Run the MyGPT pipeline, we will need the following minimum specifications for
 *   8 GB Memory (16 GB or more for better response time)
 *   10 GB hard-drive storage
 
-We will also need several tools to run the pipeline:
+You will also need:
 
-*   Python
-*   Chocolatey
-*   Git
-*   Docker
-*   Ollama
+* Git, to download the repository
+* Docker Desktop with Linux containers enabled
+* Ollama on Windows, unless you will use OpenAI mode or an Ollama server on another machine
 
-## Requirements installation
+## Install the requirements
 
-We will install these two tools in the following steps:
+Install the requirements using the official installers. Chocolatey and Python are not required for this Docker-based installation.
 
-1. **install Python and Pip**
+1. **Git**
 
-	Check if you have python installed on your system, by running following command from Command Prompt.
-	```
-	python -v
-	```
-
-	If python is not isntalled on your PC, install it by downloading latest release from this page: https://www.python.org/downloads/windows/
-
-	While Python installtion, make sure to select the following option:
-
-	<img src="../../images/python_install_windows.png?raw=true" width="500px">
-
-2. **Chocolatory installation**
-
-	Check if you have choco installed on your system by running following command.
-	```
-	choco list
-	```
-
-	If you get error that `choco not found`, you can install `choco` by folliwng command from the new Command Prompt window:
+	Install Git for Windows from [git-scm.com/download/win](https://git-scm.com/download/win). Verify it from Command Prompt:
 
 	```
-	@"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "[System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
+	git --version
 	```
 
-3.  **Git installation**
+2. **Docker Desktop**
 
-	Check if you have git installed on your system by running following command.
-
-	```
-	git --help
-	```
-
-	if you get message git not found, you can install it using choco.
+	Install [Docker Desktop for Windows](https://docs.docker.com/desktop/install-windows/) and keep it running. Verify Docker and Compose:
 
 	```
-	choco install git
+	docker --version
+	docker compose version
 	```
-	
-	After you get success message, you can close the Command Prompt window and open new Command Prompt as Administrator to run next command.
 
-4. **Docker installation**
+3. **Ollama (local LLM mode)**
 
-	To run MyGPT with CPUs-only, the entire pipeline will run as a single unit from Docker. Go to the official Docker installation page for Windows and install the appropriate Docker on your system: https://docs.docker.com/desktop/install/windows-install/
+	The default configuration uses Ollama. Install [Ollama for Windows](https://ollama.com/download/windows) and start it. Verify it by opening http://localhost:11434/ in a browser.
 
-	After installation, to verify if Docker is running on your system, run the following code:
+	Pull the default chat and embedding models:
 
 	```
-	docker --help
+	ollama pull llama3
+	ollama pull nomic-embed-text
 	```
-	If you get an error that `docker not found`,   Go to the official Docker installation page for Linux and install the appropriate Docker on your system: https://docs.docker.com/desktop/install/linux-install/
 
-5. **Ollama installation**
-
-	Finally, download and install Ollama by following instructions from this offical [Ollama site](https://ollama.ai/)
-
-	You can check if Ollama is running by visiting http://localhost:11434/ in your default browser.
-
-> [!CAUTION]
-> After installing Ollama, close any open Terminal/Command Prompt before you pull Llama3 or gpt-oss (if you have more than 8 GB RAM).
-
-Once you start Ollama, you have to pull Llama3 or gpt-oss model by running following command:
-
-```
-ollama pull llama3
-ollama pull gpt-oss
-```
-
-Also, get the nomic embedding model, which is best performing embedding model for MyGPT pipeline, by running following command:
-
-```
-ollama pull nomic-embed-text
-```
+	Skip this step if you will configure OpenAI mode or use a remote Ollama server.
 
 
 ## MyGPT installation
 
 1. **Get MyGPT source code**
 
-	If you have zip file with MyGPT installation instructions, you can unzip it and copy it on your desktop or your desired location. You can skip remaining instructions from below and go to Step 2.
-
-	Or you can get installation instructions by running following command from Terminal. It will create `MyGPT_public` folder on your Desktop or desired folder. To get this from GitHub, we will need `GitHub username` and `GitHub access token` as the GitHub repo is private. When you run the following command, it will ask for this credentials.
+	Clone the repository from Command Prompt:
 
 	```
 	git clone https://github.com/stjude/MyGPT.git
 	```
 
-> [!NOTE] 
-> If you don't have GitHub access token, you can genearte classic token using this guideline: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic
+	For a downloaded source archive, extract it and open Command Prompt in the extracted `MyGPT` folder instead.
 
-> [!CAUTION] 
-> While generating you GitHub Access Token, make sure you check access for `repo` and  `read:packages` similar to image below.
+2. **Log in to GitHub Container Registry**
 
-<img src="../../images/GitHub_access_token_scope.png?raw=true" width="600px">
-
-2. login to GitHub Docker registry
-
-	As the GitHub repository is private rightnow, we have to login to GitHub Docker registry to use the prebuilt images. To login to GitHub Docker registry, run following command. It will ask for your GitHub username and password. 
-
-> [!CAUTION]
-> Make sure Docker Desktop application is open and running before running the command.
-> the password is your access token (same token you used in step 1), not your github password you use to login in github account.
+	The Windows Compose file uses prebuilt images from GitHub Container Registry. Log in with a GitHub account and a personal access token. For a private repository, the token needs `repo` and `read:packages` access:
 
 ```
 docker login ghcr.io
 ```
 
-3. **Run docker containers**
+3. **Configure and run the containers**
 
-	Create the ignored runtime files at the repository root, replace backend placeholders, then run the containers:
+	Create the ignored runtime files at the repository root:
 
 	```
-	cd MyGPT_public
+	cd MyGPT
 	copy .env_backend.example .env_backend
 	copy .env_frontend.example .env_frontend
 	```
 
-	Open `.env_backend` in a text editor and follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets), including the Windows command for generating `SECRET_KEY` and the steps for creating `HUGGINGFACE_API_KEY`. Save the file before running the containers:
+	Open `.env_backend` and follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets) to set `SECRET_KEY`, `HUGGINGFACE_API_KEY`, and a strong `POSTGRES_PASSWORD`. Save the file before continuing.
+
+	For local Ollama, keep `VITE_OLLAMA_API=http://localhost:11434/` in `.env_frontend`; the backend reaches the Windows host through its default `OLLAMA_SERVER` value. For a remote Ollama server, set both `VITE_OLLAMA_API` (the URL reachable from the browser) and `OLLAMA_SERVER` (the URL reachable from the backend container). Do not use `localhost` for a remote server.
 
 	```
-	cd installation\windows
-	run_docker.bat
+	cd MyGPT
+	installation\windows\run_docker.bat
 	```
 
-	This script should take around 5-10 minutes to run.
-	Once the script finish running, open following pages in your default browser. 
-	You can see status of different components of MyGPT pipeline on these pages.
-	* backend: http://localhost:8000/
-
-		<img src="../../images/backend_server.png?raw=true" width="500px">
-
-	* frontend: http://localhost:3000/
-
-		<img src="../../images/frontend_launch.png?raw=true" width="1200px">
+	The script starts the database, backend, and frontend. When it finishes, open the frontend at http://localhost:3000/. The backend status page is available at http://localhost:8000/.
 
 ## MyGPT pipeline usage
 
@@ -207,7 +141,7 @@ Note: `create_superuser.sh` now runs `create_superuser_with_otp`, which creates 
 To run MCP server, run following command if you are using pre-built docker images:
 
 ```
-cd MyGPT_public\installation\windows
+cd MyGPT\installation\windows
 run_mcp_server.bat
 ```
 
@@ -215,11 +149,11 @@ This will start the MCP server and you can access it at http://localhost:5001/ss
 
 ### Configure MCP Client in MyGPT
 
-To setup MCP client in MyGPT, stop the frontend, then update the public settings in `MyGPT_public\.env_frontend`.
+To setup MCP client in MyGPT, stop the frontend, then update the public settings in `MyGPT\.env_frontend`.
 To stop the frontend, run following command if you are using pre-built docker images:
 
 ```
-cd MyGPT_public\installation\windows
+cd MyGPT\installation\windows
 stop_docker.bat
 ```
 
@@ -235,7 +169,7 @@ You can change MCP server URL to your custom MCP server URL if you are using a d
 Then, you can start the frontend again by running following command if you are using pre-built docker images:
 
 ```
-cd MyGPT_public\installation\windows
+cd MyGPT\installation\windows
 start_docker.bat
 ```
 

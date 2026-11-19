@@ -132,6 +132,8 @@ docker login ghcr.io
 
 	Open `.env_backend` in a text editor and follow [Configure backend secrets](../../backend/README.md#configure-backend-secrets) to generate `SECRET_KEY` locally and create `HUGGINGFACE_API_KEY`. Save the file before running the containers:
 
+	If Ollama is running on this Linux machine, keep `VITE_OLLAMA_API=http://localhost:11434/` in `.env_frontend`. If Ollama is running on another server, edit `.env_frontend` before starting the containers and set `VITE_OLLAMA_API` to the Ollama URL reachable from the browser, for example `http://<ollama-host>:11434/`. Do not use `localhost` for a remote Ollama server.
+
 	```
 	cd installation/linux/prebuilt_images
 	bash run_docker.sh
@@ -173,7 +175,7 @@ docker login ghcr.io
 	bash installation/linux/build_images/build_docker.sh
 	```
 
-	Before starting containers, replace all placeholders in `.env_backend` using [Configure backend secrets](../../backend/README.md#configure-backend-secrets), and review the public settings in `.env_frontend`.
+	Before starting containers, replace all placeholders in `.env_backend` using [Configure backend secrets](../../backend/README.md#configure-backend-secrets), and review the public settings in `.env_frontend`. If Ollama is running on this Linux machine, keep `VITE_OLLAMA_API=http://localhost:11434/`; if it is running on another server, set `VITE_OLLAMA_API` to the Ollama URL reachable from the browser, such as `http://<ollama-host>:11434/`.
 
 4. **Run docker containers**
 
