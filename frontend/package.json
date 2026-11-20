@@ -6,7 +6,7 @@
   "dependencies": {
     "@azure/msal-react": "^5.7.1",
     "@heroicons/react": "^2.2.0",
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "react-pdf": "^9.0.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
