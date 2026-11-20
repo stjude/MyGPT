@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.15-rc-alpine AS base
+FROM python:3.16-rc-alpine AS base
 
 # Builder stage: install build toolchain for any packages that must compile from source.
 FROM base AS builder
