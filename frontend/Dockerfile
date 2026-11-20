@@ -1,4 +1,4 @@
-FROM node:22.23.2-alpine3.23
+FROM node:22.23.4-alpine3.23
 WORKDIR /app
 ENV PATH /app/node_modules/.bin:$PATH
 COPY package.json package-lock.json /app/
